@@ -1,0 +1,1 @@
+This repository parses [TSH](http://www.poslarchive.com/tsh/doc/all.html) data files and computes standings for players over many tournaments. The point system used for these standings is configurable.
