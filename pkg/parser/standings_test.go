@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -59,7 +60,19 @@ func serializePtMap(m map[string]int) []byte {
 
 func TestCreatePtMap(t *testing.T) {
 	is := is.New(t)
-	ptMap, err := createPtMap("../../cfg/pts_mgi.csv")
+	ptMap, err := createPtMap("./testdata/pts_mgi.csv")
 	is.NoErr(err)
 	compareGolden(t, "./testdata/pts_mgi.golden", serializePtMap(ptMap))
+}
+
+func TestSingleTourneyStandings(t *testing.T) {
+	is := is.New(t)
+	contents, err := ioutil.ReadFile("./testdata/a.t")
+	is.NoErr(err)
+	standings, err := singleTourneyStandings(contents)
+	is.NoErr(err)
+
+	bts, err := json.Marshal(standings)
+	is.NoErr(err)
+	compareGolden(t, "./testdata/a.golden", bts)
 }
