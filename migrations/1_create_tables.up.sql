@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     type TEXT,
     name TEXT,
     date TEXT, -- ISO8601
-    contents BLOB,
+    contents BLOB
 );
 
 CREATE TABLE IF NOT EXISTS players (

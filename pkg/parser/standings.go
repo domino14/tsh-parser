@@ -96,7 +96,7 @@ func createPtMap(schemaFile string) (map[string]int, error) {
 }
 
 func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, error) {
-	/*ptmap*/ _, err := createPtMap(schemaFile)
+	ptmap, err := createPtMap(schemaFile)
 	if err != nil {
 		return nil, err
 	}
@@ -109,15 +109,33 @@ func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, err
 		if err != nil {
 			return nil, err
 		}
-		for _, s := range sts {
+		for si, s := range sts {
+			// assign pts for this tournament:
+			pts, ok := ptmap[fmt.Sprintf("%d:%s", si+1, t.TType)]
+			if !ok {
+				pts = 100
+				fmt.Println("[WARNING] place", si+1, "had no entry for tournament type", t.TType, "... defaulting to 100 pts")
+			}
+			s.Points = pts
 			playerStandings[s.PlayerName] = aggregate(playerStandings[s.PlayerName], s)
 		}
 	}
 
-	// then assign pts using ptmap
-	// then sort by pts to generate final standings list.
+	vals := []Standing{}
+	for _, v := range playerStandings {
+		vals = append(vals, v)
+	}
+	sort.Slice(vals, func(i, j int) bool {
+		if vals[i].Points == vals[j].Points {
+			if vals[i].Wins == vals[j].Wins {
+				return vals[i].Spread > vals[j].Spread
+			}
+			return vals[i].Wins > vals[j].Wins
+		}
+		return vals[i].Points > vals[j].Points
+	})
 
-	return nil, nil
+	return vals, nil
 }
 
 func singleTourneyStandings(tfileContents []byte) ([]Standing, error) {
