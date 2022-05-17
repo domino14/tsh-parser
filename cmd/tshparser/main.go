@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/domino14/tshparser/pkg/parser"
 	"github.com/domino14/tshparser/pkg/server"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -15,15 +16,16 @@ import (
 )
 
 type Config struct {
-	DBMigrationsPath string
-	DBPath           string
+	DBMigrationsPath  string
+	DBPath            string
+	TourneySchemaPath string
 }
 
 func (c *Config) Load(args []string) error {
 	fs := flag.NewFlagSet("tshparser", flag.ContinueOnError)
 	fs.StringVar(&c.DBMigrationsPath, "db-migrations-path", "", "the path where migrations are stored")
 	fs.StringVar(&c.DBPath, "db-path", "", "the path of the sqlite3 database")
-
+	fs.StringVar(&c.TourneySchemaPath, "tourney-schema-path", "", "the path of the tournament schema, with points/division breakdowns")
 	err := fs.Parse(args)
 	return err
 }
@@ -56,7 +58,12 @@ func main() {
 	log.Info().Interface("config", cfg).Msg("loaded-config")
 	ensureMigrations(cfg)
 
-	srv := &server.Server{}
+	store, err := parser.NewSqliteStore(cfg.DBPath)
+	if err != nil {
+		panic(err)
+	}
+	service := parser.NewService(store, cfg.TourneySchemaPath)
+	srv := server.NewHTTPServer(service)
 
 	http.Handle("/api", srv)
 	http.ListenAndServe(":8082", nil)

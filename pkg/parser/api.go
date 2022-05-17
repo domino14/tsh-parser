@@ -7,14 +7,6 @@ import (
 
 type TournamentType string
 
-type Tournament struct {
-	ID       int            `json:"id"`
-	TType    TournamentType `json:"ttype"`
-	Name     string         `json:"name"`
-	Date     time.Time      `json:"date"`
-	Contents []byte         `json:"contents"`
-}
-
 type Standing struct {
 	PlayerName        string  `json:"player_name"`
 	Points            int     `json:"points"`
@@ -23,18 +15,28 @@ type Standing struct {
 	TournamentsPlayed int     `json:"tournaments_played"`
 }
 
-type Service struct {
-	store *SqliteStore
+type Tournament struct {
+	ID        int            `json:"id"`
+	TType     TournamentType `json:"ttype"`
+	Name      string         `json:"name"`
+	Date      time.Time      `json:"date"`
+	Contents  []byte         `json:"contents"`
+	Standings []Standing     `json:"standings"`
 }
 
-func NewService(store *SqliteStore) *Service {
-	return &Service{store: store}
+type Service struct {
+	store      *SqliteStore
+	schemaPath string
+}
+
+func NewService(store *SqliteStore, schemaPath string) *Service {
+	return &Service{store: store, schemaPath: schemaPath}
 }
 
 // AddTournament adds a tournament of type ttype, with the given name
 // and .t file contents. A .t file is a TSH data file.
 // The date is used for computing YTD standings.
-func (s *Service) AddTournament(ctx context.Context, ttype TournamentType, name string, date time.Time, contents []byte) error {
+func (s *Service) AddTournament(ctx context.Context, ttype TournamentType, name string, date time.Time, contents []byte) (int64, error) {
 	return s.store.AddTournament(ctx, ttype, name, date, contents)
 }
 
@@ -44,14 +46,17 @@ func (s *Service) RemoveTournament(ctx context.Context, id int) error {
 }
 
 // ComputeStandings computes the standings between a certain date range.
-func (s *Service) ComputeStandings(ctx context.Context, beginDate time.Time, endDate time.Time,
-	schemaFile string) ([]Standing, error) {
+func (s *Service) ComputeStandings(ctx context.Context, beginDate time.Time, endDate time.Time) ([]Standing, error) {
 	tourneys, err := s.store.GetTournaments(ctx, beginDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 
-	return computeStandings(tourneys, schemaFile)
+	return computeStandings(tourneys, s.schemaPath)
+}
+
+func (s *Service) GetTournaments(ctx context.Context, beginDate time.Time, endDate time.Time) ([]Tournament, error) {
+	return s.store.GetTournaments(ctx, beginDate, endDate)
 }
 
 // AddPlayerAlias adds an alias to an original player. This can be used for cases

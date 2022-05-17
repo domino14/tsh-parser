@@ -3,6 +3,7 @@ package parser
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -22,30 +23,46 @@ func NewSqliteStore(dbName string) (*SqliteStore, error) {
 
 func (s *SqliteStore) AddTournament(ctx context.Context,
 	ttype TournamentType, name string, date time.Time,
-	tfileContents []byte) error {
+	tfileContents []byte) (int64, error) {
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = tx.ExecContext(ctx, `
+	datestr := date.Format(time.RFC3339)
+	// I can technically insert the date directly into sqlite
+	// but then it removes the `T` from the format string.
+	res, err := tx.ExecContext(ctx, `
 		INSERT INTO tournaments(type, name, date, contents)
 		VALUES(?, ?, ?, ?)
-	`, ttype, name, date, tfileContents)
+	`, ttype, name, datestr, tfileContents)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	// later parse out players from tfile and insert those etc.
 	err = tx.Commit()
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }
 
 func (s *SqliteStore) RemoveTournament(ctx context.Context, id int) error {
-	_, err := s.db.ExecContext(ctx, `
+	res, err := s.db.ExecContext(ctx, `
 		DELETE FROM tournaments
 		WHERE id = ?
 	`, id)
-	return err
+	if err != nil {
+		return err
+	}
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if ra == 0 {
+		return errors.New("no tournament was found with that id")
+	}
+	return nil
 }
 
 func (s *SqliteStore) GetTournaments(ctx context.Context, begin, end time.Time) ([]Tournament, error) {
@@ -62,10 +79,16 @@ func (s *SqliteStore) GetTournaments(ctx context.Context, begin, end time.Time) 
 	defer rows.Close()
 	for rows.Next() {
 		t := Tournament{}
-		err = rows.Scan(&t.ID, &t.TType, &t.Name, &t.Date, &t.Contents)
+		var sdate string
+		err = rows.Scan(&t.ID, &t.TType, &t.Name, &sdate, &t.Contents)
 		if err != nil {
 			return nil, err
 		}
+		t.Date, err = time.Parse(time.RFC3339, sdate)
+		if err != nil {
+			return nil, err
+		}
+
 		tourneys = append(tourneys, t)
 	}
 	return tourneys, nil

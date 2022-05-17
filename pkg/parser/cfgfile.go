@@ -23,7 +23,7 @@ func GetDivisionFilename(configTSH []byte, divisionName string) (string, error) 
 
 		if strings.HasPrefix(line, "division ") {
 			div := strings.Fields(line)
-			if div[1] == divisionName {
+			if strings.EqualFold(div[1], divisionName) {
 				return div[2], nil
 			}
 		}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"regexp"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"net/http"
 )
 
-var URLRegex = regexp.MustCompile(`(https?://.+)html/(\w)+-standings-\d+.html`)
+var URLRegex = regexp.MustCompile(`(https?://.+)html/([\w]+)-standings-\d+.html`)
 
 // an http server
 type Server struct {
@@ -35,6 +36,7 @@ func errResponse(w http.ResponseWriter, code int, err string) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
 	if r.Header.Get("Content-Type") != "application/json" {
 		errResponse(w, 400, "bad content type")
 		return
@@ -52,6 +54,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info().Interface("req", req).Msg("got request")
+	if r.Method != "POST" {
+		errResponse(w, 400, "must use POST method")
+		return
+	}
 	// this is a terrible function and i should have used protobuf
 	switch req.Method {
 	case "add":
@@ -118,16 +124,114 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			errResponse(w, 500, "could not read division file: "+err.Error())
 			return
 		}
-		err = s.service.AddTournament(r.Context(), parser.TournamentType(ttype), name, date, divcontent)
+		id, err := s.service.AddTournament(r.Context(), parser.TournamentType(ttype), name, date, divcontent)
 		if err != nil {
 			errResponse(w, 500, "could not add tournament: "+err.Error())
+			return
 		}
+		w.WriteHeader(201)
+		w.Write([]byte(fmt.Sprintf(`{"id": %d}`, id)))
 		return
+
 	case "remove":
+		// json parses numbers as float64s
+		tid, ok := req.Params["tid"].(float64)
+		if !ok {
+			errResponse(w, 400, "tid not a number")
+			return
+		}
+		if tid != float64(int(tid)) {
+			errResponse(w, 400, "tid should be an integer")
+			return
+		}
+		err := s.service.RemoveTournament(r.Context(), int(tid))
+		if err != nil {
+			errResponse(w, 500, "could not remove tournament: "+err.Error())
+			return
+		}
 
 	case "standings":
+		begin, ok := req.Params["begin"].(string)
+		if !ok {
+			errResponse(w, 400, "begin not a string")
+			return
+		}
+		bdate, err := time.Parse(time.RFC3339, begin)
+		if err != nil {
+			errResponse(w, 400, err.Error())
+			return
+		}
+
+		end, ok := req.Params["end"].(string)
+		if !ok {
+			errResponse(w, 400, "end not a string")
+			return
+		}
+		edate, err := time.Parse(time.RFC3339, end)
+		if err != nil {
+			errResponse(w, 400, err.Error())
+			return
+		}
+
+		st, err := s.service.ComputeStandings(r.Context(), bdate, edate)
+		if err != nil {
+			errResponse(w, 500, "error computing standings: "+err.Error())
+			return
+		}
+		bts, err := json.Marshal(st)
+		if err != nil {
+			errResponse(w, 500, "error marshalling standings: "+err.Error())
+			return
+		}
+		w.Write(bts)
+		return
+
+	case "tournaments":
+		begin, ok := req.Params["begin"].(string)
+		if !ok {
+			errResponse(w, 400, "begin not a string")
+			return
+		}
+		bdate, err := time.Parse(time.RFC3339, begin)
+		if err != nil {
+			errResponse(w, 400, err.Error())
+			return
+		}
+
+		end, ok := req.Params["end"].(string)
+		if !ok {
+			errResponse(w, 400, "end not a string")
+			return
+		}
+		edate, err := time.Parse(time.RFC3339, end)
+		if err != nil {
+			errResponse(w, 400, err.Error())
+			return
+		}
+		ts, err := s.service.GetTournaments(r.Context(), bdate, edate)
+		if err != nil {
+			errResponse(w, 500, "error getting tournaments: "+err.Error())
+			return
+		}
+		for ti := range ts {
+			ts[ti].Standings, err = parser.SingleTourneyStandings(ts[ti].Contents)
+			if err != nil {
+				errResponse(w, 500, "error computing standings: "+err.Error())
+				return
+			}
+			ts[ti].Contents = nil
+		}
+		bts, err := json.Marshal(ts)
+		if err != nil {
+			errResponse(w, 500, "error marshalling standings: "+err.Error())
+			return
+		}
+		w.Write(bts)
+		return
+	default:
+		errResponse(w, 400, "method not handled")
+		return
 	}
 
-	w.WriteHeader(200)
 	w.Write([]byte(`{"msg": "ok"}`))
 }

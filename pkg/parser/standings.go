@@ -18,7 +18,7 @@ var (
 	singlePosRegex = regexp.MustCompile(`(\d+)`)
 	rangePosRegex  = regexp.MustCompile(`(\d+)-(\d+)`)
 
-	tFileFirstFieldRegex = regexp.MustCompile(`([\pL,\.\s]+)(.+)`)
+	tFileFirstFieldRegex = regexp.MustCompile(`([\pL,\.\s\d]+)[\s]{2,}[\d]+(.+)`)
 )
 
 // t-files are iso-8859-1 by default. let's ignore this for now.
@@ -105,7 +105,7 @@ func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, err
 
 	// Now, iterate through all the tournaments and assign scores accordingly.
 	for _, t := range tourneys {
-		sts, err := singleTourneyStandings(t.Contents)
+		sts, err := SingleTourneyStandings(t.Contents)
 		if err != nil {
 			return nil, err
 		}
@@ -128,6 +128,9 @@ func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, err
 	sort.Slice(vals, func(i, j int) bool {
 		if vals[i].Points == vals[j].Points {
 			if vals[i].Wins == vals[j].Wins {
+				if vals[i].Spread == vals[j].Spread {
+					return vals[i].PlayerName < vals[j].PlayerName
+				}
 				return vals[i].Spread > vals[j].Spread
 			}
 			return vals[i].Wins > vals[j].Wins
@@ -138,7 +141,7 @@ func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, err
 	return vals, nil
 }
 
-func singleTourneyStandings(tfileContents []byte) ([]Standing, error) {
+func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 	reader := bytes.NewReader(tfileContents)
 	bufReader := bufio.NewReader(reader)
 
@@ -170,9 +173,7 @@ func singleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 			return nil, errors.New("badly formatted scores")
 		}
 		pname := strings.TrimSpace(firstField[1])
-		m := strings.Fields(firstField[2])
-		// Disregard the first number, as it is the rating:
-		m = m[1:]
+		m := strings.Fields(strings.TrimSpace(firstField[2]))
 		if len(m) != len(s) {
 			return nil, fmt.Errorf("matchups don't match scores (is the tournament still going?) %v %v", m, s)
 		}
@@ -215,6 +216,9 @@ func singleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 	// Sort standings by wins then spread.
 	sort.Slice(standings, func(i, j int) bool {
 		if standings[i].Wins == standings[j].Wins {
+			if standings[i].Spread == standings[j].Spread {
+				return standings[i].PlayerName < standings[j].PlayerName
+			}
 			return standings[i].Spread > standings[j].Spread
 		}
 		return standings[i].Wins > standings[j].Wins
@@ -225,7 +229,7 @@ func singleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 func aggregate(origStanding, toAdd Standing) Standing {
 	// "add" the standing to origStanding
 	st := Standing{
-		PlayerName:        origStanding.PlayerName, // should be the same as the player in toAdd
+		PlayerName:        toAdd.PlayerName,
 		Points:            origStanding.Points + toAdd.Points,
 		Wins:              origStanding.Wins + toAdd.Wins,
 		Spread:            origStanding.Spread + toAdd.Spread,
