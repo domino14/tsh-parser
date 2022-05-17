@@ -1,0 +1,93 @@
+# sample configuration for FTP server
+
+division A a.t
+division B b.t
+
+# classes a 2
+config max_rounds = 12
+config max_div_rounds{'B'} = 12
+
+config event_name = 'MGI SCRABBLE PREMIER LEAGUE 2022 - MATCH DAY ONE'
+config event_date = 'February 19, 2021'
+config director_name = 'Adedeji Khaleel'
+config html_top = '<div class=noprint><table align=center border=0 cellpadding=3 cellspacing=0><tr><td rowspan=2><a href="http://mindgamesincorporated.com/"><img border=0 src="index.jpg"></a></td><td><font size="+2">MGI SCRABBLE PREMIER LEAGUE 2022 - Match Day One <br> Lagos Country Club, Ikeja, Lagos State.</b></td><tr><td><font size="+1"><b>February 19, 2022</b></font></td></tr></table></div>'
+
+# config sb_banner_url = "https://lh3.googleusercontent.com/W0nfarZIyI0e45x6TYducp-9fp5T38dYX9X0sduRsU-fWJOIhb68yHi6AerAKGdRoyeGGw=s170"
+
+# config sb_banner_height = 128
+ config bye_spread = 100
+ config pairing_system = 'manual'
+
+ config prize_bands{'A'} = [1,2,3,4,5]
+ prize rank 1 A 1,500,000+TROPHY
+ prize rank 2 A   800,000
+ prize rank 3 A   500,000
+ prize rank 4 A   300,000
+ prize rank 5 A   200,000
+
+config prize_bands{'B'} = [1,2,3,4,5]
+ prize rank 1 B 1,000,000
+ prize rank 2 B  500,000
+ prize rank 3 B  300,000
+ prize rank 4 B  200,000
+ prize rank 5 B  100,000
+
+
+# FTP server information
+config ftp_host = 'mindgamesincorporated.com'
+config ftp_path = ''
+config ftp_no_overwrite = 1
+config photo_database = 'nga'
+config realm = 'nga'
+config assign_firsts = 1
+config track_firsts = 1
+config avoid_sr_runs = 1
+config gibson = 1
+config gibson_spread = [400]
+config check_by_winner = 1
+config squads = 1
+config team_rank_count_cap = 5
+config show_teams = 1
+config scoreboard_teams = 1
+config standings_hotlink = 1
+config player_photos = 1
+config no_text_files = 1
+config show_inactive = 1
+config division_label{'A'}= 'Premier'
+Config division_label{'B'}= 'Open'
+config board_stability = 0
+config session_breaks = [7,12]
+config addscore_prompt = 'games'
+config roster_order = 'seed'
+config no_initial_rr = 0
+config currency_symbol = 'NGN'
+# config rating_system = 'nga'
+# config tournament_id = 'nga'
+config html_index_recent_first = 1
+
+
+
+
+# Scoreboard configuration
+# The following line makes sure that the scoreboard is initialised.
+# If you have multiple divisions, use one such line per division.
+begin esb A
+begin esb B
+
+# The 'json' command updates the tourney.js data file for the scoreboard.
+# Sometimes, you will need to run it by hand, such as when you make manual
+# changes to pairings, or correct a mis-entered score. 
+# We can make it run automatically under some circumstances.
+# This line makes sure that it is run whenever the addscore command saves data.
+config hook_addscore_flush = 'json'
+# And this one runs it whenever automatic pairings are generated.
+# It also computes end-of-round statistics.
+config hook_autopair = 'json;stats'
+#Â This says to use player photos. You will probably also want to specify
+# a configuration realm that tells TSH which photo database to use.
+config hook_division_complete{'A'} = 'st a;rat a;stats;esb a; sb a;sdsc a;wc a;rwc a;crs $r a'
+config hook_division_complete{'B'} = 'st b;rat b;stats;esb b; sb b;sdsc b;wc b;rwc b;crs $r b'
+
+
+
+
