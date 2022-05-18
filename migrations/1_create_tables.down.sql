@@ -5,3 +5,5 @@ DROP TABLE IF EXISTS player_aliases;
 
 DROP INDEX IF EXISTS date_index;
 DROP INDEX IF EXISTS name_index;
+DROP INDEX IF EXISTS alias_index;
+DROP INDEX IF EXISTS uniq_alias_index;

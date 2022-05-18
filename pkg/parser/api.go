@@ -2,6 +2,8 @@ package parser
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 )
 
@@ -51,8 +53,12 @@ func (s *Service) ComputeStandings(ctx context.Context, beginDate time.Time, end
 	if err != nil {
 		return nil, err
 	}
+	aliases, err := s.store.GetAllAliases(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return computeStandings(tourneys, s.schemaPath)
+	return computeStandings(tourneys, s.schemaPath, aliases)
 }
 
 func (s *Service) GetTournaments(ctx context.Context, beginDate time.Time, endDate time.Time) ([]Tournament, error) {
@@ -62,10 +68,15 @@ func (s *Service) GetTournaments(ctx context.Context, beginDate time.Time, endDa
 // AddPlayerAlias adds an alias to an original player. This can be used for cases
 // where names might not exactly match across different tournaments.
 func (s *Service) AddPlayerAlias(ctx context.Context, origPlayer, alias string) error {
-
-	return nil
+	if origPlayer == alias {
+		return errors.New("origPlayer must not be equal to alias")
+	}
+	if origPlayer == "" || alias == "" {
+		return errors.New("both origPlayer and alias must be specified")
+	}
+	return s.store.AddPlayerAlias(ctx, strings.TrimSpace(origPlayer), strings.TrimSpace(alias))
 }
 
-func (s *Service) RemovePlayerAlias(ctx context.Context, alias string) error {
-	return nil
+func (s *Service) RemovePlayerAlias(ctx context.Context, origPlayer, alias string) error {
+	return s.store.RemovePlayerAlias(ctx, strings.TrimSpace(origPlayer), strings.TrimSpace(alias))
 }

@@ -95,7 +95,7 @@ func createPtMap(schemaFile string) (map[string]int, error) {
 	return ptmap, nil
 }
 
-func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, error) {
+func computeStandings(tourneys []Tournament, schemaFile string, aliases map[string]string) ([]Standing, error) {
 	ptmap, err := createPtMap(schemaFile)
 	if err != nil {
 		return nil, err
@@ -118,6 +118,14 @@ func computeStandings(tourneys []Tournament, schemaFile string) ([]Standing, err
 			}
 			s.Points = pts
 			playerStandings[s.PlayerName] = aggregate(playerStandings[s.PlayerName], s)
+		}
+	}
+
+	// now aggregate and remove aliases
+	for alias, realPlayer := range aliases {
+		if _, ok := playerStandings[alias]; ok {
+			playerStandings[realPlayer] = aggregate(playerStandings[realPlayer], playerStandings[alias])
+			delete(playerStandings, alias)
 		}
 	}
 
@@ -212,6 +220,7 @@ func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 			} // otherwise, we lost, but the other player's standing will take care of this.
 			standings[i].Spread += ourScore - theirScore
 		}
+		standings[i].TournamentsPlayed = 1
 	}
 	// Sort standings by wins then spread.
 	sort.Slice(standings, func(i, j int) bool {
@@ -233,7 +242,7 @@ func aggregate(origStanding, toAdd Standing) Standing {
 		Points:            origStanding.Points + toAdd.Points,
 		Wins:              origStanding.Wins + toAdd.Wins,
 		Spread:            origStanding.Spread + toAdd.Spread,
-		TournamentsPlayed: origStanding.TournamentsPlayed + 1,
+		TournamentsPlayed: origStanding.TournamentsPlayed + toAdd.TournamentsPlayed,
 	}
 	return st
 }

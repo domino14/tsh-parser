@@ -228,6 +228,40 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(bts)
 		return
+
+	case "addalias":
+		origPlayer, ok := req.Params["origPlayer"].(string)
+		if !ok {
+			errResponse(w, 400, "origPlayer not a string")
+			return
+		}
+		alias, ok := req.Params["alias"].(string)
+		if !ok {
+			errResponse(w, 400, "alias not a string")
+			return
+		}
+		err := s.service.AddPlayerAlias(r.Context(), origPlayer, alias)
+		if err != nil {
+			errResponse(w, 500, "error adding alias: "+err.Error())
+			return
+		}
+
+	case "removealias":
+		origPlayer, ok := req.Params["origPlayer"].(string)
+		if !ok {
+			errResponse(w, 400, "origPlayer not a string")
+			return
+		}
+		alias, ok := req.Params["alias"].(string)
+		if !ok {
+			errResponse(w, 400, "alias not a string")
+			return
+		}
+		err := s.service.RemovePlayerAlias(r.Context(), origPlayer, alias)
+		if err != nil {
+			errResponse(w, 500, "error removing alias: "+err.Error())
+			return
+		}
 	default:
 		errResponse(w, 400, "method not handled")
 		return

@@ -20,9 +20,13 @@ CREATE TABLE IF NOT EXISTS player_tournaments (
 );
 
 CREATE TABLE IF NOT EXISTS player_aliases (
-    original_player TEXT
+    original_player TEXT,
     alias TEXT
 );
 
 CREATE INDEX IF NOT EXISTS date_index ON tournaments(date);
 CREATE UNIQUE INDEX IF NOT EXISTS name_index ON tournaments(name, type);
+CREATE UNIQUE INDEX IF NOT EXISTS alias_index ON player_aliases(
+    original_player, alias
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_alias_index ON player_aliases(alias);
