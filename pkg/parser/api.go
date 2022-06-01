@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type TournamentType string
@@ -49,6 +51,7 @@ func (s *Service) RemoveTournament(ctx context.Context, id int) error {
 
 // ComputeStandings computes the standings between a certain date range.
 func (s *Service) ComputeStandings(ctx context.Context, beginDate time.Time, endDate time.Time) ([]Standing, error) {
+	log.Debug().Interface("beginDate", beginDate).Interface("endDate", endDate).Msg("computeStandings")
 	tourneys, err := s.store.GetTournaments(ctx, beginDate, endDate)
 	if err != nil {
 		return nil, err

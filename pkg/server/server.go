@@ -36,6 +36,7 @@ func errResponse(w http.ResponseWriter, code int, err string) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("got request")
 	w.Header().Add("Content-Type", "application/json")
 	if r.Header.Get("Content-Type") != "application/json" {
 		errResponse(w, 400, "bad content type")

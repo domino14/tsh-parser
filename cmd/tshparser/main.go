@@ -66,6 +66,10 @@ func main() {
 	srv := server.NewHTTPServer(service)
 
 	http.Handle("/api", srv)
-	http.ListenAndServe(":8082", nil)
-
+	log.Info().Msg("about to listen...")
+	err = http.ListenAndServe(":8082", nil)
+	if err != nil {
+		panic(err)
+	}
+	log.Info().Msg("exiting")
 }
