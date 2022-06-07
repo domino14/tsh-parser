@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/domino14/tshparser/rpc/proto"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,7 +24,7 @@ func NewSqliteStore(dbName string) (*SqliteStore, error) {
 }
 
 func (s *SqliteStore) AddTournament(ctx context.Context,
-	ttype TournamentType, name string, date time.Time,
+	ttype string, name string, date time.Time,
 	tfileContents []byte) (int64, error) {
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -67,7 +68,7 @@ func (s *SqliteStore) RemoveTournament(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *SqliteStore) GetTournaments(ctx context.Context, begin, end time.Time) ([]Tournament, error) {
+func (s *SqliteStore) GetTournaments(ctx context.Context, begin, end time.Time) ([]*proto.Tournament, error) {
 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, type, name, date, contents
@@ -77,20 +78,14 @@ func (s *SqliteStore) GetTournaments(ctx context.Context, begin, end time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	tourneys := []Tournament{}
+	tourneys := []*proto.Tournament{}
 	defer rows.Close()
 	for rows.Next() {
-		t := Tournament{}
-		var sdate string
-		err = rows.Scan(&t.ID, &t.TType, &t.Name, &sdate, &t.Contents)
+		t := &proto.Tournament{}
+		err = rows.Scan(&t.Id, &t.TournamentType, &t.Name, &t.Date, &t.TfileContents)
 		if err != nil {
 			return nil, err
 		}
-		t.Date, err = time.Parse(time.RFC3339, sdate)
-		if err != nil {
-			return nil, err
-		}
-
 		tourneys = append(tourneys, t)
 	}
 	return tourneys, nil
@@ -125,10 +120,8 @@ func (s *SqliteStore) AddPlayerAlias(ctx context.Context, origPlayer, alias stri
 	return tx.Commit()
 }
 
-func (s *SqliteStore) RemovePlayerAlias(ctx context.Context, origPlayer, alias string) error {
-	res, err := s.db.ExecContext(ctx, `
-		DELETE FROM player_aliases WHERE original_player = ? AND alias = ?
-	`, origPlayer, alias)
+func (s *SqliteStore) RemovePlayerAlias(ctx context.Context, alias string) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM player_aliases WHERE alias = ?`, alias)
 	if err != nil {
 		return err
 	}
@@ -138,6 +131,10 @@ func (s *SqliteStore) RemovePlayerAlias(ctx context.Context, origPlayer, alias s
 	}
 	if ra == 0 {
 		return errors.New("that alias was not found")
+	}
+	if ra > 1 {
+		// This should never happen because of our index.
+		return errors.New("deleted more than one alias")
 	}
 	return nil
 }

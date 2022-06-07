@@ -69,7 +69,7 @@ func TestSingleTourneyStandings(t *testing.T) {
 	is := is.New(t)
 	contents, err := ioutil.ReadFile("./testdata/a.t")
 	is.NoErr(err)
-	standings, err := singleTourneyStandings(contents)
+	standings, err := SingleTourneyStandings(contents)
 	is.NoErr(err)
 
 	bts, err := json.Marshal(standings)

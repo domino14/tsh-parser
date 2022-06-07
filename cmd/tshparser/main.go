@@ -1,18 +1,26 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
-	"github.com/domino14/tshparser/pkg/parser"
-	"github.com/domino14/tshparser/pkg/server"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/justinas/alice"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/namsral/flag"
+	"github.com/rs/zerolog/hlog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/domino14/tshparser/pkg/parser"
+	"github.com/domino14/tshparser/rpc/proto"
 )
 
 type Config struct {
@@ -58,18 +66,51 @@ func main() {
 	log.Info().Interface("config", cfg).Msg("loaded-config")
 	ensureMigrations(cfg)
 
+	router := http.NewServeMux()
+
+	middlewares := alice.New(
+		hlog.NewHandler(log.With().Str("service", "liwords").Logger()),
+		hlog.AccessHandler(func(r *http.Request, status int, size int, d time.Duration) {
+			path := strings.Split(r.URL.Path, "/")
+			method := path[len(path)-1]
+			hlog.FromRequest(r).Info().Str("method", method).Int("status", status).Dur("duration", d).Msg("")
+		}),
+	)
+
 	store, err := parser.NewSqliteStore(cfg.DBPath)
 	if err != nil {
 		panic(err)
 	}
 	service := parser.NewService(store, cfg.TourneySchemaPath)
-	srv := server.NewHTTPServer(service)
 
-	http.Handle("/api", srv)
-	log.Info().Msg("about to listen...")
-	err = http.ListenAndServe(":8082", nil)
-	if err != nil {
-		panic(err)
+	router.Handle(proto.TournamentRankerServicePathPrefix,
+		middlewares.Then(proto.NewTournamentRankerServiceServer(service)))
+
+	srv := &http.Server{
+		Addr:         ":8082",
+		Handler:      router,
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second}
+
+	idleConnsClosed := make(chan struct{})
+	sig := make(chan os.Signal, 1)
+
+	go func() {
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+		log.Info().Msg("got quit signal...")
+		ctx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := srv.Shutdown(ctx); err != nil {
+			// Error from closing listeners, or context timeout:
+			log.Error().Msgf("HTTP server Shutdown: %v", err)
+		}
+		shutdownCancel()
+		close(idleConnsClosed)
+	}()
+	log.Info().Msg("starting listening...")
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal().Err(err).Msg("")
 	}
-	log.Info().Msg("exiting")
+	<-idleConnsClosed
+	log.Info().Msg("server gracefully shutting down")
 }

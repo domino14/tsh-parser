@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/domino14/tshparser/rpc/proto"
 )
 
 var (
@@ -95,28 +97,28 @@ func createPtMap(schemaFile string) (map[string]int, error) {
 	return ptmap, nil
 }
 
-func computeStandings(tourneys []Tournament, schemaFile string, aliases map[string]string) ([]Standing, error) {
+func computeStandings(tourneys []*proto.Tournament, schemaFile string, aliases map[string]string) ([]*proto.Standing, error) {
 	ptmap, err := createPtMap(schemaFile)
 	if err != nil {
 		return nil, err
 	}
 
-	playerStandings := make(map[string]Standing)
+	playerStandings := make(map[string]*proto.Standing)
 
 	// Now, iterate through all the tournaments and assign scores accordingly.
 	for _, t := range tourneys {
-		sts, err := SingleTourneyStandings(t.Contents)
+		sts, err := SingleTourneyStandings(t.TfileContents)
 		if err != nil {
 			return nil, err
 		}
 		for si, s := range sts {
 			// assign pts for this tournament:
-			pts, ok := ptmap[fmt.Sprintf("%d:%s", si+1, t.TType)]
+			pts, ok := ptmap[fmt.Sprintf("%d:%s", si+1, t.TournamentType)]
 			if !ok {
 				pts = 100
-				fmt.Println("[WARNING] place", si+1, "had no entry for tournament type", t.TType, "... defaulting to 100 pts")
+				fmt.Println("[WARNING] place", si+1, "had no entry for tournament type", t.TournamentType, "... defaulting to 100 pts")
 			}
-			s.Points = pts
+			s.Points = int32(pts)
 			playerStandings[s.PlayerName] = aggregate(playerStandings[s.PlayerName], s)
 		}
 	}
@@ -129,7 +131,7 @@ func computeStandings(tourneys []Tournament, schemaFile string, aliases map[stri
 		}
 	}
 
-	vals := []Standing{}
+	vals := []*proto.Standing{}
 	for _, v := range playerStandings {
 		vals = append(vals, v)
 	}
@@ -146,14 +148,18 @@ func computeStandings(tourneys []Tournament, schemaFile string, aliases map[stri
 		return vals[i].Points > vals[j].Points
 	})
 
+	// re-assign ranks
+	for idx := range vals {
+		vals[idx].Rank = int32(idx + 1)
+	}
 	return vals, nil
 }
 
-func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
+func SingleTourneyStandings(tfileContents []byte) ([]*proto.Standing, error) {
 	reader := bytes.NewReader(tfileContents)
 	bufReader := bufio.NewReader(reader)
 
-	standings := []Standing{}
+	standings := []*proto.Standing{}
 	matchups := [][]int{}
 	allScores := [][]int{}
 	for {
@@ -181,6 +187,9 @@ func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 			return nil, errors.New("badly formatted scores")
 		}
 		pname := strings.TrimSpace(firstField[1])
+		//  I don't know just some characters here that might be erroneously at the beginning
+		// or end of a name:
+		pname = strings.Trim(pname, `.,;:<>"-=+`)
 		m := strings.Fields(strings.TrimSpace(firstField[2]))
 		if len(m) != len(s) {
 			return nil, fmt.Errorf("matchups don't match scores (is the tournament still going?) %v %v", m, s)
@@ -200,7 +209,7 @@ func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 		}
 		matchups = append(matchups, numericMatchups)
 		allScores = append(allScores, scores)
-		standings = append(standings, Standing{PlayerName: pname})
+		standings = append(standings, &proto.Standing{PlayerName: pname})
 	}
 	// Now compute wins and spread
 	for i := range standings {
@@ -218,7 +227,8 @@ func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 			} else if ourScore == theirScore {
 				standings[i].Wins += 0.5
 			} // otherwise, we lost, but the other player's standing will take care of this.
-			standings[i].Spread += ourScore - theirScore
+			standings[i].Spread += int32(ourScore - theirScore)
+			standings[i].Games += 1 // XXX: what if it's a bye?
 		}
 		standings[i].TournamentsPlayed = 1
 	}
@@ -232,17 +242,27 @@ func SingleTourneyStandings(tfileContents []byte) ([]Standing, error) {
 		}
 		return standings[i].Wins > standings[j].Wins
 	})
+
+	for idx := range standings {
+		standings[idx].Rank = int32(idx + 1)
+	}
+
 	return standings, nil
 }
 
-func aggregate(origStanding, toAdd Standing) Standing {
+func aggregate(origStanding, toAdd *proto.Standing) *proto.Standing {
+	if origStanding == nil {
+		// Use the zero-values if origStanding is nil.
+		origStanding = &proto.Standing{}
+	}
 	// "add" the standing to origStanding
-	st := Standing{
+	st := &proto.Standing{
 		PlayerName:        toAdd.PlayerName,
 		Points:            origStanding.Points + toAdd.Points,
 		Wins:              origStanding.Wins + toAdd.Wins,
 		Spread:            origStanding.Spread + toAdd.Spread,
 		TournamentsPlayed: origStanding.TournamentsPlayed + toAdd.TournamentsPlayed,
+		Games:             origStanding.Games + toAdd.Games,
 	}
 	return st
 }

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package tshparser;
+option go_package = "github.com/domino14/tshparser/rpc/proto";
+
+message Standing {
+  string player_name = 1;
+  int32 points = 2;
+  double wins = 3;
+  int32 games = 4;
+  int32 spread = 5;
+  int32 tournaments_played = 6;
+  int32 rank = 7;
+}
+
+message Tournament {
+  int64 id = 1;
+  string tournament_type = 2;
+  string name = 3;
+  string date = 4; // RFC3339 format
+  bytes tfile_contents = 5;
+  repeated Standing standings = 6;
+}
+
+message PlayerAlias {
+  string original_player = 1;
+  string alias = 2;
+}
+
+message AddTournamentRequest {
+  string date = 1;
+  string name = 2;
+  string tournament_type = 3;
+  string tsh_url = 4;
+}
+
+message AddTournamentResponse { int64 id = 1; }
+
+message RemoveTournamentRequest { int64 id = 1; }
+message RemoveTournamentResponse {}
+
+message ComputeStandingsRequest {
+  string begin_date = 1;
+  string end_date = 2;
+}
+message StandingsResponse { repeated Standing standings = 1; }
+
+message GetTournamentsRequest {
+  string begin_date = 1;
+  string end_date = 2;
+}
+message TournamentsResponse { repeated Tournament tournaments = 1; }
+
+message AddPlayerAliasResponse {}
+message RemovePlayerAliasRequest { string alias = 1; }
+message RemovePlayerAliasResponse {}
+
+message ListPlayerAliasesRequest {}
+message PlayerAliasesResponse { map<string, string> aliases = 1; }
+
+service TournamentRankerService {
+  rpc AddTournament(AddTournamentRequest) returns (AddTournamentResponse);
+  rpc RemoveTournament(RemoveTournamentRequest)
+      returns (RemoveTournamentResponse);
+  rpc ComputeStandings(ComputeStandingsRequest) returns (StandingsResponse);
+  rpc GetTournaments(GetTournamentsRequest) returns (TournamentsResponse);
+  rpc AddPlayerAlias(PlayerAlias) returns (AddPlayerAliasResponse);
+  rpc RemovePlayerAlias(RemovePlayerAliasRequest)
+      returns (RemovePlayerAliasResponse);
+  rpc ListPlayerAliases(ListPlayerAliasesRequest)
+      returns (PlayerAliasesResponse);
+}
