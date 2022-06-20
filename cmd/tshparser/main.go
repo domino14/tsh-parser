@@ -27,6 +27,7 @@ type Config struct {
 	DBMigrationsPath  string
 	DBPath            string
 	TourneySchemaPath string
+	SecretKey         string
 }
 
 func (c *Config) Load(args []string) error {
@@ -34,6 +35,7 @@ func (c *Config) Load(args []string) error {
 	fs.StringVar(&c.DBMigrationsPath, "db-migrations-path", "", "the path where migrations are stored")
 	fs.StringVar(&c.DBPath, "db-path", "", "the path of the sqlite3 database")
 	fs.StringVar(&c.TourneySchemaPath, "tourney-schema-path", "", "the path of the tournament schema, with points/division breakdowns")
+	fs.StringVar(&c.SecretKey, "secret-key", "", "a secret key for signing stuff")
 	err := fs.Parse(args)
 	return err
 }
@@ -63,6 +65,11 @@ func ensureMigrations(cfg *Config) {
 func main() {
 	cfg := &Config{}
 	cfg.Load(os.Args[1:])
+
+	if cfg.SecretKey == "" {
+		panic("no secret key provided")
+	}
+
 	log.Info().Interface("config", cfg).Msg("loaded-config")
 	ensureMigrations(cfg)
 
@@ -75,16 +82,22 @@ func main() {
 			method := path[len(path)-1]
 			hlog.FromRequest(r).Info().Str("method", method).Int("status", status).Dur("duration", d).Msg("")
 		}),
+		parser.JWTMiddlewareGenerator(),
 	)
 
 	store, err := parser.NewSqliteStore(cfg.DBPath)
 	if err != nil {
 		panic(err)
 	}
-	service := parser.NewService(store, cfg.TourneySchemaPath)
+
+	tourneyservice := parser.NewService(store, cfg.TourneySchemaPath, cfg.SecretKey)
+	authservice := parser.NewAuthService(store, cfg.SecretKey)
 
 	router.Handle(proto.TournamentRankerServicePathPrefix,
-		middlewares.Then(proto.NewTournamentRankerServiceServer(service)))
+		middlewares.Then(proto.NewTournamentRankerServiceServer(tourneyservice)))
+
+	router.Handle(proto.AuthenticationServicePathPrefix,
+		middlewares.Then(proto.NewAuthenticationServiceServer(authservice)))
 
 	srv := &http.Server{
 		Addr:         ":8082",
@@ -94,6 +107,9 @@ func main() {
 
 	idleConnsClosed := make(chan struct{})
 	sig := make(chan os.Signal, 1)
+
+	// router.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./ui/static"))))
+	router.Handle("/", http.FileServer(http.Dir("./ui")))
 
 	go func() {
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)

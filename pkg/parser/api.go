@@ -18,10 +18,25 @@ var URLRegex = regexp.MustCompile(`(https?://.+)html/([\w]+)-standings-\d+.html`
 type Service struct {
 	store      *SqliteStore
 	schemaPath string
+	secretKey  string
 }
 
-func NewService(store *SqliteStore, schemaPath string) *Service {
-	return &Service{store: store, schemaPath: schemaPath}
+func NewService(store *SqliteStore, schemaPath, secretKey string) *Service {
+	return &Service{store: store, schemaPath: schemaPath, secretKey: secretKey}
+}
+
+func adminRequired(ctx context.Context, secretKey string) error {
+	u, err := userFromHTTPHeader(ctx, secretKey)
+	if err != nil {
+		return err
+	}
+	// Note: This doesn't check the database, but the IsAdmin is embedded in
+	// the JWT. This is ok for this small app. Revisit this if this turns into
+	// a problem.
+	if !u.IsAdmin {
+		return errors.New("user is not an admin")
+	}
+	return nil
 }
 
 func tshFileContents(turl string) ([]byte, error) {
@@ -59,7 +74,10 @@ func tshFileContents(turl string) ([]byte, error) {
 }
 
 func (s *Service) AddTournament(ctx context.Context, req *proto.AddTournamentRequest) (*proto.AddTournamentResponse, error) {
-
+	err := adminRequired(ctx, s.secretKey)
+	if err != nil {
+		return nil, err
+	}
 	date, err := time.Parse(time.RFC3339, req.Date)
 	if err != nil {
 		return nil, err
@@ -76,7 +94,11 @@ func (s *Service) AddTournament(ctx context.Context, req *proto.AddTournamentReq
 }
 
 func (s *Service) RemoveTournament(ctx context.Context, req *proto.RemoveTournamentRequest) (*proto.RemoveTournamentResponse, error) {
-	err := s.store.RemoveTournament(ctx, int(req.Id))
+	err := adminRequired(ctx, s.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	err = s.store.RemoveTournament(ctx, int(req.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +147,10 @@ func (s *Service) GetTournaments(ctx context.Context, req *proto.GetTournamentsR
 }
 
 func (s *Service) AddPlayerAlias(ctx context.Context, req *proto.PlayerAlias) (*proto.AddPlayerAliasResponse, error) {
+	err := adminRequired(ctx, s.secretKey)
+	if err != nil {
+		return nil, err
+	}
 	origPlayer := strings.TrimSpace(req.OriginalPlayer)
 	alias := strings.TrimSpace(req.Alias)
 	if origPlayer == alias {
@@ -133,7 +159,7 @@ func (s *Service) AddPlayerAlias(ctx context.Context, req *proto.PlayerAlias) (*
 	if origPlayer == "" || alias == "" {
 		return nil, errors.New("both origPlayer and alias must be specified")
 	}
-	err := s.store.AddPlayerAlias(ctx, origPlayer, alias)
+	err = s.store.AddPlayerAlias(ctx, origPlayer, alias)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +167,11 @@ func (s *Service) AddPlayerAlias(ctx context.Context, req *proto.PlayerAlias) (*
 }
 
 func (s *Service) RemovePlayerAlias(ctx context.Context, req *proto.RemovePlayerAliasRequest) (*proto.RemovePlayerAliasResponse, error) {
-	err := s.store.RemovePlayerAlias(ctx, strings.TrimSpace(req.Alias))
+	err := adminRequired(ctx, s.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	err = s.store.RemovePlayerAlias(ctx, strings.TrimSpace(req.Alias))
 	if err != nil {
 		return nil, err
 	}

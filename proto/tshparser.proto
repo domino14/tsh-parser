@@ -51,6 +51,8 @@ message GetTournamentsRequest {
 }
 message TournamentsResponse { repeated Tournament tournaments = 1; }
 
+message TournamentsForPlayerRequest { string name_or_alias = 1; }
+
 message AddPlayerAliasResponse {}
 message RemovePlayerAliasRequest { string alias = 1; }
 message RemovePlayerAliasResponse {}
@@ -69,4 +71,6 @@ service TournamentRankerService {
       returns (RemovePlayerAliasResponse);
   rpc ListPlayerAliases(ListPlayerAliasesRequest)
       returns (PlayerAliasesResponse);
+  //   rpc TournamentsForPlayer(TournamentsForPlayerRequest)
+  //       returns (TournamentsResponse);
 }

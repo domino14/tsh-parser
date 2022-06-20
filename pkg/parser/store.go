@@ -159,3 +159,37 @@ func (s *SqliteStore) GetAllAliases(ctx context.Context) (map[string]string, err
 	}
 	return aliases, nil
 }
+
+func (s *SqliteStore) NewUser(ctx context.Context, email, passwordHash string) error {
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	createdAt := time.Now().Format(time.RFC3339)
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO auth_users(email, password, created_at, is_admin)
+		VALUES(?, ?, ?, 0)
+	`, email, passwordHash, createdAt)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (s *SqliteStore) GetUser(ctx context.Context, email string) (*proto.User, error) {
+	var passwordHash string
+	var isAdmin bool
+	err := s.db.QueryRowContext(ctx, `
+		SELECT password, is_admin FROM auth_users WHERE email = ?
+	`, email).Scan(&passwordHash, &isAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.User{
+		Email: email, PasswordHash: passwordHash, IsAdmin: isAdmin,
+	}, nil
+}

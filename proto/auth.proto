@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package tshparser;
+option go_package = "github.com/domino14/tshparser/rpc/proto";
+
+message NewUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message NewUserResponse {}
+
+message JWTRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message JWTResponse { string token = 1; }
+
+message User {
+  string email = 1;
+  string password_hash = 2;
+  bool is_admin = 3;
+}
+
+message WhoAmIRequest {}
+
+service AuthenticationService {
+  rpc RegisterUser(NewUserRequest) returns (NewUserResponse);
+  rpc GetJWT(JWTRequest) returns (JWTResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (User);
+}

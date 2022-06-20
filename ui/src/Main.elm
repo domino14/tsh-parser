@@ -43,9 +43,11 @@ type alias StandingsRequest =
 type alias Standing =
     { player_name : String
     , points : Int
+    , games : Int
     , wins : Float
     , spread : Int
     , tournaments_played : Int
+    , rank : Int
     }
 
 
@@ -159,7 +161,7 @@ standingsDecoder =
 getStandings : StandingsRequest -> Cmd Msg
 getStandings req =
     Http.post
-        { url = "http://localhost:8082/api"
+        { url = "localhost:8082/twirp/tshparser.TournamentRankerService/ComputeStandings"
         , body = Http.jsonBody (standingsReqEncoder req)
         , expect = Http.expectJson GotStandings standingsDecoder
         }
