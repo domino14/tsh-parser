@@ -5,28 +5,38 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
+import Json.Encode as Encode
 import RemoteData exposing (WebData)
-import Tournament exposing (Tournament, tournamentsDecoder)
+import Tournament exposing (Tournament, tournamentsResponseDecoder)
 
 
 type alias Model =
     { tournaments : WebData (List Tournament)
     , dateRange : DateRange
+    , deleteError : Maybe String
     }
 
 
 type Msg
     = FetchTournaments DateRange
     | TournamentsReceived (WebData (List Tournament))
+    | DeleteTournament String
+    | TournamentDeleted (Result Http.Error String)
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { tournaments = RemoteData.NotAsked
-      , dateRange = { beginDate = "2022-01-01", endDate = "2023-01-01" }
-      }
-    , Cmd.none
-    )
+init : ( Model, Cmd Msg )
+init =
+    let
+        model =
+            { tournaments = RemoteData.Loading
+            , dateRange =
+                { beginDate = "2022-01-01T00:00:00Z"
+                , endDate = "2023-01-01T00:00:00Z"
+                }
+            , deleteError = Nothing
+            }
+    in
+    ( model, fetchTournaments model.dateRange )
 
 
 fetchTournaments : DateRange -> Cmd Msg
@@ -35,7 +45,7 @@ fetchTournaments dateRange =
         -- XXX: use some sort of env var on prod?
         { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/GetTournaments"
         , expect =
-            tournamentsDecoder
+            tournamentsResponseDecoder
                 |> Http.expectJson (RemoteData.fromResult >> TournamentsReceived)
         , body = Http.jsonBody (dateRangeEncoder dateRange)
         }
@@ -50,6 +60,33 @@ update msg model =
         TournamentsReceived response ->
             ( { model | tournaments = response }, Cmd.none )
 
+        DeleteTournament tid ->
+            ( model, deleteTournament tid )
+
+        TournamentDeleted (Ok _) ->
+            ( model, fetchTournaments model.dateRange )
+
+        TournamentDeleted (Err error) ->
+            ( { model | deleteError = Just (buildErrorMessage error) }
+            , Cmd.none
+            )
+
+
+deleteTournament : String -> Cmd Msg
+deleteTournament tid =
+    Http.post
+        { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/RemoveTournament"
+        , expect = Http.expectString TournamentDeleted -- "{}"
+        , body = Http.jsonBody (tourneyIDEncoder tid)
+        }
+
+
+tourneyIDEncoder : String -> Encode.Value
+tourneyIDEncoder tid =
+    Encode.object
+        [ ( "id", Encode.string tid )
+        ]
+
 
 
 -- VIEWS
@@ -61,6 +98,7 @@ view model =
         [ button [ onClick (FetchTournaments model.dateRange) ]
             [ text "Refresh tournaments" ]
         , viewTournaments model.tournaments
+        , viewDeleteError model.deleteError
         ]
 
 
@@ -90,6 +128,7 @@ viewTableHeader =
         [ th [] [ text "Date" ]
         , th [] [ text "Category" ]
         , th [] [ text "Name" ]
+        , th [] [ text "" ]
         ]
 
 
@@ -99,6 +138,10 @@ viewTournament tournament =
         [ td [] [ text tournament.date ]
         , td [] [ text tournament.category ]
         , td [] [ text tournament.name ]
+        , td []
+            [ button [ type_ "button", onClick (DeleteTournament tournament.id) ]
+                [ text "Delete" ]
+            ]
         ]
 
 
@@ -112,6 +155,19 @@ viewTournamentError errorMsg =
         [ h3 [] [ text errorHeading ]
         , text ("Error: " ++ errorMsg)
         ]
+
+
+viewDeleteError : Maybe String -> Html msg
+viewDeleteError maybeError =
+    case maybeError of
+        Just error ->
+            div []
+                [ h3 [] [ text "Couldn't delete tournament at this time." ]
+                , text ("Error: " ++ error)
+                ]
+
+        Nothing ->
+            text ""
 
 
 buildErrorMessage : Http.Error -> String
