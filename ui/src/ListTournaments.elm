@@ -1,6 +1,7 @@
 module ListTournaments exposing (..)
 
 import DateRange exposing (DateRange, dateRangeEncoder)
+import Errors exposing (buildErrorMessage)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -14,6 +15,7 @@ type alias Model =
     { tournaments : WebData (List Tournament)
     , dateRange : DateRange
     , deleteError : Maybe String
+    , jwt : String
     }
 
 
@@ -24,8 +26,8 @@ type Msg
     | TournamentDeleted (Result Http.Error String)
 
 
-init : ( Model, Cmd Msg )
-init =
+init : String -> ( Model, Cmd Msg )
+init jwt =
     let
         model =
             { tournaments = RemoteData.Loading
@@ -34,6 +36,7 @@ init =
                 , endDate = "2023-01-01T00:00:00Z"
                 }
             , deleteError = Nothing
+            , jwt = jwt
             }
     in
     ( model, fetchTournaments model.dateRange )
@@ -95,8 +98,18 @@ tourneyIDEncoder tid =
 view : Model -> Html Msg
 view model =
     div []
-        [ button [ onClick (FetchTournaments model.dateRange) ]
+        [ button [ class "button", onClick (FetchTournaments model.dateRange) ]
             [ text "Refresh tournaments" ]
+        , br [] []
+        , br [] []
+        , a [ href "/tournaments/new" ]
+            [ text "Add a new tournament" ]
+        , br [] []
+        , br [] []
+        , a [ href "/standings" ]
+            [ text "View standings to date" ]
+        , br [] []
+        , br [] []
         , viewTournaments model.tournaments
         , viewDeleteError model.deleteError
         ]
@@ -109,12 +122,12 @@ viewTournaments tournaments =
             text ""
 
         RemoteData.Loading ->
-            h3 [] [ text "Loading..." ]
+            h3 [ class "subtitle is-2" ] [ text "Loading..." ]
 
         RemoteData.Success actualTournaments ->
             div []
-                [ h3 [] [ text "Tournaments" ]
-                , table []
+                [ h2 [ class "subtitle is-2" ] [ text "Tournaments" ]
+                , table [ class "table" ]
                     (viewTableHeader :: List.map viewTournament actualTournaments)
                 ]
 
@@ -139,7 +152,7 @@ viewTournament tournament =
         , td [] [ text tournament.category ]
         , td [] [ text tournament.name ]
         , td []
-            [ button [ type_ "button", onClick (DeleteTournament tournament.id) ]
+            [ button [ class "button is-warning", type_ "button", onClick (DeleteTournament tournament.id) ]
                 [ text "Delete" ]
             ]
         ]
@@ -168,22 +181,3 @@ viewDeleteError maybeError =
 
         Nothing ->
             text ""
-
-
-buildErrorMessage : Http.Error -> String
-buildErrorMessage httpError =
-    case httpError of
-        Http.BadUrl message ->
-            message
-
-        Http.Timeout ->
-            "Server is taking too long to respond. Please try again later."
-
-        Http.NetworkError ->
-            "Unable to reach server."
-
-        Http.BadStatus statusCode ->
-            "Request failed with status code: " ++ String.fromInt statusCode
-
-        Http.BadBody message ->
-            message

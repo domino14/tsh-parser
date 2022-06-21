@@ -8,6 +8,14 @@ A user interface is included that allows an operator to add/remove tournaments, 
 DB_MIGRATIONS_PATH=file://../../migrations/ DB_PATH=mgi.db TOURNEY_SCHEMA_PATH=../../cfg/pts_mgi.csv SECRET_KEY=foobar ./tshparser
 ```
 
+front-end:
+
+In `ui` directory:
+
+```
+elm-live src/Main.elm --open --pushstate -- --output=compiled.js
+```
+
 # protoc
 
 To generate pb files, run this in the base directory:

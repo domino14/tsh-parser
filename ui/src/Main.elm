@@ -3,8 +3,14 @@ module Main exposing (..)
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
+import Html.Attributes exposing (class)
+import Json.Decode as Decode
+import Jwt
 import ListTournaments
-import Route exposing (Route)
+import NewTournament
+import Route exposing (Route(..))
+import SingleStanding exposing (Standing)
+import Standings
 import Url exposing (Url)
 
 
@@ -24,19 +30,23 @@ type alias Model =
     { route : Route
     , page : Page
     , navKey : Nav.Key
+    , jwt : String
     }
 
 
 type Page
     = NotFoundPage
     | TournamentListPage ListTournaments.Model
-    | StandingsPage
+    | StandingsPage Standings.Model
+    | NewTournamentPage NewTournament.Model
 
 
 type Msg
     = ListPageMsg ListTournaments.Msg
     | LinkClicked UrlRequest
     | UrlChanged Url
+    | NewTournamentPageMsg NewTournament.Msg
+    | StandingsPageMsg Standings.Msg
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -46,6 +56,7 @@ init flags url navKey =
             { route = Route.parseUrl url
             , page = NotFoundPage
             , navKey = navKey
+            , jwt = ""
             }
     in
     initCurrentPage ( model, Cmd.none )
@@ -62,12 +73,23 @@ initCurrentPage ( model, existingCmds ) =
                 Route.Tournaments ->
                     let
                         ( pageModel, pageCmds ) =
-                            ListTournaments.init
+                            ListTournaments.init model.jwt
                     in
                     ( TournamentListPage pageModel, Cmd.map ListPageMsg pageCmds )
 
                 Route.Standings ->
-                    ( NotFoundPage, Cmd.none )
+                    let
+                        ( pageModel, pageCmds ) =
+                            Standings.init
+                    in
+                    ( StandingsPage pageModel, Cmd.map StandingsPageMsg pageCmds )
+
+                Route.NewTournament ->
+                    let
+                        ( pageModel, pageCmd ) =
+                            NewTournament.init model.navKey
+                    in
+                    ( NewTournamentPage pageModel, Cmd.map NewTournamentPageMsg pageCmd )
     in
     ( { model | page = currentPage }
     , Cmd.batch [ existingCmds, mappedPageCmds ]
@@ -77,8 +99,53 @@ initCurrentPage ( model, existingCmds ) =
 view : Model -> Document Msg
 view model =
     { title = "MGI Manager"
-    , body = [ currentView model ]
+    , body =
+        [ div [ class "container" ]
+            [ loggedInBar model
+            , currentView model
+            ]
+        ]
     }
+
+
+
+-- we only care about the "sub" field here.
+
+
+jwtDecoder : Decode.Decoder String
+jwtDecoder =
+    Decode.field "sub" Decode.string
+
+
+emailFromJwt : String -> Result Jwt.JwtError String
+emailFromJwt jwt =
+    Jwt.decodeToken jwtDecoder jwt
+
+
+userOrLogin : Model -> Html Msg
+userOrLogin model =
+    let
+        email =
+            emailFromJwt model.jwt
+    in
+    case email of
+        Err _ ->
+            a [ class "button" ] [ text "Log in" ]
+
+        Ok actualEmail ->
+            span [] [ text ("Logged in as " ++ actualEmail) ]
+
+
+loggedInBar : Model -> Html Msg
+loggedInBar model =
+    nav [ class "navbar" ]
+        [ div [ class "navbar-brand" ]
+            [ text "MGI Management Portal" ]
+        , div [ class "navbar-end" ]
+            [ div [ class "navbar-item" ]
+                [ userOrLogin model ]
+            ]
+        ]
 
 
 currentView : Model -> Html Msg
@@ -91,8 +158,13 @@ currentView model =
             ListTournaments.view pageModel
                 |> Html.map ListPageMsg
 
-        StandingsPage ->
-            notFoundView
+        StandingsPage pageModel ->
+            Standings.view pageModel
+                |> Html.map StandingsPageMsg
+
+        NewTournamentPage pageModel ->
+            NewTournament.view pageModel
+                |> Html.map NewTournamentPageMsg
 
 
 notFoundView : Html msg
@@ -110,6 +182,24 @@ update msg model =
             in
             ( { model | page = TournamentListPage updatedPageModel }
             , Cmd.map ListPageMsg updatedCmd
+            )
+
+        ( StandingsPageMsg subMsg, StandingsPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    Standings.update subMsg pageModel
+            in
+            ( { model | page = StandingsPage updatedPageModel }
+            , Cmd.map StandingsPageMsg updatedCmd
+            )
+
+        ( NewTournamentPageMsg subMsg, NewTournamentPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    NewTournament.update subMsg pageModel
+            in
+            ( { model | page = NewTournamentPage updatedPageModel }
+            , Cmd.map NewTournamentPageMsg updatedCmd
             )
 
         ( LinkClicked urlRequest, _ ) ->
