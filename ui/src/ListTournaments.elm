@@ -8,6 +8,7 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
 import RemoteData exposing (WebData)
+import Session exposing (Session, twirpReq)
 import Tournament exposing (Tournament, tournamentsResponseDecoder)
 
 
@@ -15,7 +16,6 @@ type alias Model =
     { tournaments : WebData (List Tournament)
     , dateRange : DateRange
     , deleteError : Maybe String
-    , jwt : String
     }
 
 
@@ -26,8 +26,8 @@ type Msg
     | TournamentDeleted (Result Http.Error String)
 
 
-init : String -> ( Model, Cmd Msg )
-init jwt =
+init : ( Model, Cmd Msg )
+init =
     let
         model =
             { tournaments = RemoteData.Loading
@@ -36,7 +36,6 @@ init jwt =
                 , endDate = "2023-01-01T00:00:00Z"
                 }
             , deleteError = Nothing
-            , jwt = jwt
             }
     in
     ( model, fetchTournaments model.dateRange )
@@ -54,8 +53,8 @@ fetchTournaments dateRange =
         }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : Session -> Msg -> Model -> ( Model, Cmd Msg )
+update session msg model =
     case msg of
         FetchTournaments dateRange ->
             ( { model | tournaments = RemoteData.Loading }, fetchTournaments dateRange )
@@ -64,7 +63,7 @@ update msg model =
             ( { model | tournaments = response }, Cmd.none )
 
         DeleteTournament tid ->
-            ( model, deleteTournament tid )
+            ( model, deleteTournament session tid )
 
         TournamentDeleted (Ok _) ->
             ( model, fetchTournaments model.dateRange )
@@ -75,13 +74,14 @@ update msg model =
             )
 
 
-deleteTournament : String -> Cmd Msg
-deleteTournament tid =
-    Http.post
-        { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/RemoveTournament"
-        , expect = Http.expectString TournamentDeleted -- "{}"
-        , body = Http.jsonBody (tourneyIDEncoder tid)
-        }
+deleteTournament : Session -> String -> Cmd Msg
+deleteTournament sess tid =
+    twirpReq
+        sess
+        "TournamentRankerService"
+        "RemoveTournament"
+        (Http.expectString TournamentDeleted)
+        (Http.jsonBody (tourneyIDEncoder tid))
 
 
 tourneyIDEncoder : String -> Encode.Value

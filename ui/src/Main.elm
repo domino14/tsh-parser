@@ -10,6 +10,7 @@ import ListTournaments
 import Login
 import NewTournament
 import Route exposing (Route(..))
+import Session exposing (Session)
 import SingleStanding exposing (Standing)
 import Standings
 import Url exposing (Url)
@@ -31,7 +32,7 @@ type alias Model =
     { route : Route
     , page : Page
     , navKey : Nav.Key
-    , jwt : String
+    , session : Session
     }
 
 
@@ -59,7 +60,7 @@ init flags url navKey =
             { route = Route.parseUrl url
             , page = NotFoundPage
             , navKey = navKey
-            , jwt = ""
+            , session = Session ""
             }
     in
     initCurrentPage ( model, Cmd.none )
@@ -76,7 +77,7 @@ initCurrentPage ( model, existingCmds ) =
                 Route.Tournaments ->
                     let
                         ( pageModel, pageCmds ) =
-                            ListTournaments.init model.jwt
+                            ListTournaments.init
                     in
                     ( TournamentListPage pageModel, Cmd.map ListPageMsg pageCmds )
 
@@ -136,7 +137,7 @@ userOrLogin : Model -> Html Msg
 userOrLogin model =
     let
         email =
-            emailFromJwt model.jwt
+            emailFromJwt model.session.jwt
     in
     case email of
         Err _ ->
@@ -192,7 +193,7 @@ update msg model =
         ( ListPageMsg subMsg, TournamentListPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    ListTournaments.update subMsg pageModel
+                    ListTournaments.update model.session subMsg pageModel
             in
             ( { model | page = TournamentListPage updatedPageModel }
             , Cmd.map ListPageMsg updatedCmd
@@ -210,7 +211,7 @@ update msg model =
         ( NewTournamentPageMsg subMsg, NewTournamentPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    NewTournament.update subMsg pageModel
+                    NewTournament.update model.session subMsg pageModel
             in
             ( { model | page = NewTournamentPage updatedPageModel }
             , Cmd.map NewTournamentPageMsg updatedCmd
@@ -223,7 +224,7 @@ update msg model =
             in
             ( { model
                 | page = LoginPage updatedPageModel
-                , jwt = updatedPageModel.token -- is there something better than passing it this way?
+                , session = Session updatedPageModel.token -- is there something better than passing it this way?
               }
             , Cmd.map LoginPageMsg updatedCmd
             )

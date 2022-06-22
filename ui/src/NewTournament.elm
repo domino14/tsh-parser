@@ -11,6 +11,7 @@ import Json.Decode as Decode exposing (Decoder, field, map, string)
 import Json.Encode as Encode
 import ListTournaments exposing (Msg)
 import Route exposing (Route)
+import Session exposing (Session, twirpReq)
 
 
 type alias TournamentRequest =
@@ -108,8 +109,8 @@ newTournamentForm =
         ]
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : Session -> Msg -> Model -> ( Model, Cmd Msg )
+update sess msg model =
     case msg of
         StoreCategory category ->
             let
@@ -127,7 +128,7 @@ update msg model =
                     model.tournamentRequest
 
                 updateDate =
-                    { req | date = date }
+                    { req | date = date ++ "T00:00:00Z" }
             in
             ( { model | tournamentRequest = updateDate }, Cmd.none )
 
@@ -152,7 +153,7 @@ update msg model =
             ( { model | tournamentRequest = updateUrl }, Cmd.none )
 
         Submit ->
-            ( model, createTournament model.tournamentRequest )
+            ( model, createTournament sess model.tournamentRequest )
 
         TournamentCreated (Ok _) ->
             ( { model | createError = Nothing }
@@ -165,13 +166,14 @@ update msg model =
             )
 
 
-createTournament : TournamentRequest -> Cmd Msg
-createTournament req =
-    Http.post
-        { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/AddTournament"
-        , body = Http.jsonBody (reqEncoder req)
-        , expect = Http.expectJson TournamentCreated creationDecoder
-        }
+createTournament : Session -> TournamentRequest -> Cmd Msg
+createTournament sess req =
+    twirpReq
+        sess
+        "TournamentRankerService"
+        "AddTournament"
+        (Http.expectJson TournamentCreated creationDecoder)
+        (Http.jsonBody (reqEncoder req))
 
 
 type alias TournamentCreationResponse =

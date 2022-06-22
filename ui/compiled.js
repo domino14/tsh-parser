@@ -5573,6 +5573,9 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$application = _Browser_application;
 var $author$project$Main$NotFoundPage = {$: 'NotFoundPage'};
+var $author$project$Session$Session = function (jwt) {
+	return {jwt: jwt};
+};
 var $author$project$Main$ListPageMsg = function (a) {
 	return {$: 'ListPageMsg', a: a};
 };
@@ -6483,17 +6486,16 @@ var $author$project$ListTournaments$fetchTournaments = function (dateRange) {
 			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/GetTournaments'
 		});
 };
-var $author$project$ListTournaments$init = function (jwt) {
+var $author$project$ListTournaments$init = function () {
 	var model = {
 		dateRange: {beginDate: '2022-01-01T00:00:00Z', endDate: '2023-01-01T00:00:00Z'},
 		deleteError: $elm$core$Maybe$Nothing,
-		jwt: jwt,
 		tournaments: $krisajenkins$remotedata$RemoteData$Loading
 	};
 	return _Utils_Tuple2(
 		model,
 		$author$project$ListTournaments$fetchTournaments(model.dateRange));
-};
+}();
 var $author$project$Login$LoginRequest = F2(
 	function (email, password) {
 		return {email: email, password: password};
@@ -6601,7 +6603,7 @@ var $author$project$Main$initCurrentPage = function (_v0) {
 			case 'NotFound':
 				return _Utils_Tuple2($author$project$Main$NotFoundPage, $elm$core$Platform$Cmd$none);
 			case 'Tournaments':
-				var _v3 = $author$project$ListTournaments$init(model.jwt);
+				var _v3 = $author$project$ListTournaments$init;
 				var pageModel = _v3.a;
 				var pageCmds = _v3.b;
 				return _Utils_Tuple2(
@@ -6906,10 +6908,10 @@ var $author$project$Route$parseUrl = function (url) {
 var $author$project$Main$init = F3(
 	function (flags, url, navKey) {
 		var model = {
-			jwt: '',
 			navKey: navKey,
 			page: $author$project$Main$NotFoundPage,
-			route: $author$project$Route$parseUrl(url)
+			route: $author$project$Route$parseUrl(url),
+			session: $author$project$Session$Session('')
 		};
 		return $author$project$Main$initCurrentPage(
 			_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
@@ -6997,17 +6999,40 @@ var $author$project$ListTournaments$tourneyIDEncoder = function (tid) {
 				$elm$json$Json$Encode$string(tid))
 			]));
 };
-var $author$project$ListTournaments$deleteTournament = function (tid) {
-	return $elm$http$Http$post(
-		{
-			body: $elm$http$Http$jsonBody(
-				$author$project$ListTournaments$tourneyIDEncoder(tid)),
-			expect: $elm$http$Http$expectString($author$project$ListTournaments$TournamentDeleted),
-			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/RemoveTournament'
-		});
-};
-var $author$project$ListTournaments$update = F2(
-	function (msg, model) {
+var $elm$http$Http$Header = F2(
+	function (a, b) {
+		return {$: 'Header', a: a, b: b};
+	});
+var $elm$http$Http$header = $elm$http$Http$Header;
+var $author$project$Session$twirpReq = F5(
+	function (sess, service, method, expect, body) {
+		return $elm$http$Http$request(
+			{
+				body: body,
+				expect: expect,
+				headers: _List_fromArray(
+					[
+						A2($elm$http$Http$header, 'Authorization', 'Bearer ' + sess.jwt)
+					]),
+				method: 'POST',
+				timeout: $elm$core$Maybe$Nothing,
+				tracker: $elm$core$Maybe$Nothing,
+				url: 'http://localhost:8082/twirp/tshparser.' + (service + ('/' + method))
+			});
+	});
+var $author$project$ListTournaments$deleteTournament = F2(
+	function (sess, tid) {
+		return A5(
+			$author$project$Session$twirpReq,
+			sess,
+			'TournamentRankerService',
+			'RemoveTournament',
+			$elm$http$Http$expectString($author$project$ListTournaments$TournamentDeleted),
+			$elm$http$Http$jsonBody(
+				$author$project$ListTournaments$tourneyIDEncoder(tid)));
+	});
+var $author$project$ListTournaments$update = F3(
+	function (session, msg, model) {
 		switch (msg.$) {
 			case 'FetchTournaments':
 				var dateRange = msg.a;
@@ -7027,7 +7052,7 @@ var $author$project$ListTournaments$update = F2(
 				var tid = msg.a;
 				return _Utils_Tuple2(
 					model,
-					$author$project$ListTournaments$deleteTournament(tid));
+					A2($author$project$ListTournaments$deleteTournament, session, tid));
 			default:
 				if (msg.a.$ === 'Ok') {
 					return _Utils_Tuple2(
@@ -7176,17 +7201,19 @@ var $author$project$NewTournament$reqEncoder = function (req) {
 				$elm$json$Json$Encode$string(req.tshURL))
 			]));
 };
-var $author$project$NewTournament$createTournament = function (req) {
-	return $elm$http$Http$post(
-		{
-			body: $elm$http$Http$jsonBody(
-				$author$project$NewTournament$reqEncoder(req)),
-			expect: A2($elm$http$Http$expectJson, $author$project$NewTournament$TournamentCreated, $author$project$NewTournament$creationDecoder),
-			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/AddTournament'
-		});
-};
-var $author$project$NewTournament$update = F2(
-	function (msg, model) {
+var $author$project$NewTournament$createTournament = F2(
+	function (sess, req) {
+		return A5(
+			$author$project$Session$twirpReq,
+			sess,
+			'TournamentRankerService',
+			'AddTournament',
+			A2($elm$http$Http$expectJson, $author$project$NewTournament$TournamentCreated, $author$project$NewTournament$creationDecoder),
+			$elm$http$Http$jsonBody(
+				$author$project$NewTournament$reqEncoder(req)));
+	});
+var $author$project$NewTournament$update = F3(
+	function (sess, msg, model) {
 		switch (msg.$) {
 			case 'StoreCategory':
 				var category = msg.a;
@@ -7204,7 +7231,7 @@ var $author$project$NewTournament$update = F2(
 				var req = model.tournamentRequest;
 				var updateDate = _Utils_update(
 					req,
-					{date: date});
+					{date: date + 'T00:00:00Z'});
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7235,7 +7262,7 @@ var $author$project$NewTournament$update = F2(
 			case 'Submit':
 				return _Utils_Tuple2(
 					model,
-					$author$project$NewTournament$createTournament(model.tournamentRequest));
+					A2($author$project$NewTournament$createTournament, sess, model.tournamentRequest));
 			default:
 				if (msg.a.$ === 'Ok') {
 					return _Utils_Tuple2(
@@ -7284,7 +7311,7 @@ var $author$project$Main$update = F2(
 					if (_v0.b.$ === 'TournamentListPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v1 = A2($author$project$ListTournaments$update, subMsg, pageModel);
+						var _v1 = A3($author$project$ListTournaments$update, model.session, subMsg, pageModel);
 						var updatedPageModel = _v1.a;
 						var updatedCmd = _v1.b;
 						return _Utils_Tuple2(
@@ -7318,7 +7345,7 @@ var $author$project$Main$update = F2(
 					if (_v0.b.$ === 'NewTournamentPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v3 = A2($author$project$NewTournament$update, subMsg, pageModel);
+						var _v3 = A3($author$project$NewTournament$update, model.session, subMsg, pageModel);
 						var updatedPageModel = _v3.a;
 						var updatedCmd = _v3.b;
 						return _Utils_Tuple2(
@@ -7342,8 +7369,8 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{
-									jwt: updatedPageModel.token,
-									page: $author$project$Main$LoginPage(updatedPageModel)
+									page: $author$project$Main$LoginPage(updatedPageModel),
+									session: $author$project$Session$Session(updatedPageModel.token)
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, updatedCmd));
 					} else {
@@ -8779,7 +8806,7 @@ var $author$project$Main$emailFromJwt = function (jwt) {
 };
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $author$project$Main$userOrLogin = function (model) {
-	var email = $author$project$Main$emailFromJwt(model.jwt);
+	var email = $author$project$Main$emailFromJwt(model.session.jwt);
 	if (email.$ === 'Err') {
 		return A2(
 			$elm$html$Html$a,
