@@ -5576,6 +5576,12 @@ var $author$project$Main$NotFoundPage = {$: 'NotFoundPage'};
 var $author$project$Main$ListPageMsg = function (a) {
 	return {$: 'ListPageMsg', a: a};
 };
+var $author$project$Main$LoginPage = function (a) {
+	return {$: 'LoginPage', a: a};
+};
+var $author$project$Main$LoginPageMsg = function (a) {
+	return {$: 'LoginPageMsg', a: a};
+};
 var $author$project$Main$NewTournamentPage = function (a) {
 	return {$: 'NewTournamentPage', a: a};
 };
@@ -6488,6 +6494,24 @@ var $author$project$ListTournaments$init = function (jwt) {
 		model,
 		$author$project$ListTournaments$fetchTournaments(model.dateRange));
 };
+var $author$project$Login$LoginRequest = F2(
+	function (email, password) {
+		return {email: email, password: password};
+	});
+var $author$project$Login$initialModel = function (navKey) {
+	return {
+		loginError: $elm$core$Maybe$Nothing,
+		loginRequest: A2($author$project$Login$LoginRequest, '', ''),
+		navKey: navKey,
+		token: ''
+	};
+};
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Login$init = function (navKey) {
+	return _Utils_Tuple2(
+		$author$project$Login$initialModel(navKey),
+		$elm$core$Platform$Cmd$none);
+};
 var $author$project$NewTournament$TournamentRequest = F4(
 	function (date, name, category, tshURL) {
 		return {category: category, date: date, name: name, tshURL: tshURL};
@@ -6499,7 +6523,6 @@ var $author$project$NewTournament$initialModel = function (navKey) {
 		tournamentRequest: A4($author$project$NewTournament$TournamentRequest, '', '', 'MGILeague-Div1', '')
 	};
 };
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$NewTournament$init = function (navKey) {
 	return _Utils_Tuple2(
 		$author$project$NewTournament$initialModel(navKey),
@@ -6591,13 +6614,20 @@ var $author$project$Main$initCurrentPage = function (_v0) {
 				return _Utils_Tuple2(
 					$author$project$Main$StandingsPage(pageModel),
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$StandingsPageMsg, pageCmds));
-			default:
+			case 'NewTournament':
 				var _v5 = $author$project$NewTournament$init(model.navKey);
 				var pageModel = _v5.a;
 				var pageCmd = _v5.b;
 				return _Utils_Tuple2(
 					$author$project$Main$NewTournamentPage(pageModel),
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, pageCmd));
+			default:
+				var _v6 = $author$project$Login$init(model.navKey);
+				var pageModel = _v6.a;
+				var pageCmd = _v6.b;
+				return _Utils_Tuple2(
+					$author$project$Main$LoginPage(pageModel),
+					A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, pageCmd));
 		}
 	}();
 	var currentPage = _v1.a;
@@ -6611,6 +6641,7 @@ var $author$project$Main$initCurrentPage = function (_v0) {
 				[existingCmds, mappedPageCmds])));
 };
 var $author$project$Route$NotFound = {$: 'NotFound'};
+var $author$project$Route$Login = {$: 'Login'};
 var $author$project$Route$NewTournament = {$: 'NewTournament'};
 var $author$project$Route$Standings = {$: 'Standings'};
 var $author$project$Route$Tournaments = {$: 'Tournaments'};
@@ -6742,7 +6773,11 @@ var $author$project$Route$matchRoute = $elm$url$Url$Parser$oneOf(
 			A2(
 				$elm$url$Url$Parser$slash,
 				$elm$url$Url$Parser$s('tournaments'),
-				$elm$url$Url$Parser$s('new')))
+				$elm$url$Url$Parser$s('new'))),
+			A2(
+			$elm$url$Url$Parser$map,
+			$author$project$Route$Login,
+			$elm$url$Url$Parser$s('login'))
 		]));
 var $elm$url$Url$Parser$getFirstMatch = function (states) {
 	getFirstMatch:
@@ -7011,6 +7046,108 @@ var $author$project$ListTournaments$update = F2(
 				}
 		}
 	});
+var $author$project$Route$routeToString = function (route) {
+	switch (route.$) {
+		case 'NotFound':
+			return '/not-found';
+		case 'Tournaments':
+			return '/tournaments';
+		case 'Standings':
+			return '/standings';
+		case 'NewTournament':
+			return '/tournaments/new';
+		default:
+			return '/login';
+	}
+};
+var $author$project$Route$pushUrl = F2(
+	function (route, navKey) {
+		return A2(
+			$elm$browser$Browser$Navigation$pushUrl,
+			navKey,
+			$author$project$Route$routeToString(route));
+	});
+var $author$project$Login$LoggedIn = function (a) {
+	return {$: 'LoggedIn', a: a};
+};
+var $author$project$Login$LoginResponse = function (token) {
+	return {token: token};
+};
+var $author$project$Login$loginResponseDecoder = A2(
+	$elm$json$Json$Decode$map,
+	$author$project$Login$LoginResponse,
+	A2($elm$json$Json$Decode$field, 'token', $elm$json$Json$Decode$string));
+var $author$project$Login$reqEncoder = function (req) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'email',
+				$elm$json$Json$Encode$string(req.email)),
+				_Utils_Tuple2(
+				'password',
+				$elm$json$Json$Encode$string(req.password))
+			]));
+};
+var $author$project$Login$requestJWT = function (req) {
+	return $elm$http$Http$post(
+		{
+			body: $elm$http$Http$jsonBody(
+				$author$project$Login$reqEncoder(req)),
+			expect: A2($elm$http$Http$expectJson, $author$project$Login$LoggedIn, $author$project$Login$loginResponseDecoder),
+			url: 'http://localhost:8082/twirp/tshparser.AuthenticationService/GetJWT'
+		});
+};
+var $author$project$Login$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'StoreEmail':
+				var email = msg.a;
+				var req = model.loginRequest;
+				var updateEmail = _Utils_update(
+					req,
+					{email: email});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{loginRequest: updateEmail}),
+					$elm$core$Platform$Cmd$none);
+			case 'StorePassword':
+				var password = msg.a;
+				var req = model.loginRequest;
+				var updatePassword = _Utils_update(
+					req,
+					{password: password});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{loginRequest: updatePassword}),
+					$elm$core$Platform$Cmd$none);
+			case 'Submit':
+				return _Utils_Tuple2(
+					model,
+					$author$project$Login$requestJWT(model.loginRequest));
+			default:
+				if (msg.a.$ === 'Ok') {
+					var loginResponse = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{loginError: $elm$core$Maybe$Nothing, token: loginResponse.token}),
+						A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
+				} else {
+					var error = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								loginError: $elm$core$Maybe$Just(
+									$author$project$Errors$buildErrorMessage(error))
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+		}
+	});
 var $author$project$NewTournament$TournamentCreated = function (a) {
 	return {$: 'TournamentCreated', a: a};
 };
@@ -7048,25 +7185,6 @@ var $author$project$NewTournament$createTournament = function (req) {
 			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/AddTournament'
 		});
 };
-var $author$project$Route$routeToString = function (route) {
-	switch (route.$) {
-		case 'NotFound':
-			return '/not-found';
-		case 'Tournaments':
-			return '/tournaments';
-		case 'Standings':
-			return '/standings';
-		default:
-			return '/tournaments/new';
-	}
-};
-var $author$project$Route$pushUrl = F2(
-	function (route, navKey) {
-		return A2(
-			$elm$browser$Browser$Navigation$pushUrl,
-			navKey,
-			$author$project$Route$routeToString(route));
-	});
 var $author$project$NewTournament$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -7159,7 +7277,7 @@ var $author$project$Standings$update = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.page);
-		_v0$5:
+		_v0$6:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ListPageMsg':
@@ -7177,7 +7295,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, updatedCmd));
 					} else {
-						break _v0$5;
+						break _v0$6;
 					}
 				case 'StandingsPageMsg':
 					if (_v0.b.$ === 'StandingsPage') {
@@ -7194,7 +7312,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$StandingsPageMsg, updatedCmd));
 					} else {
-						break _v0$5;
+						break _v0$6;
 					}
 				case 'NewTournamentPageMsg':
 					if (_v0.b.$ === 'NewTournamentPage') {
@@ -7211,7 +7329,25 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, updatedCmd));
 					} else {
-						break _v0$5;
+						break _v0$6;
+					}
+				case 'LoginPageMsg':
+					if (_v0.b.$ === 'LoginPage') {
+						var subMsg = _v0.a.a;
+						var pageModel = _v0.b.a;
+						var _v4 = A2($author$project$Login$update, subMsg, pageModel);
+						var updatedPageModel = _v4.a;
+						var updatedCmd = _v4.b;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									jwt: updatedPageModel.token,
+									page: $author$project$Main$LoginPage(updatedPageModel)
+								}),
+							A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, updatedCmd));
+					} else {
+						break _v0$6;
 					}
 				case 'LinkClicked':
 					var urlRequest = _v0.a.a;
@@ -7518,23 +7654,13 @@ var $author$project$ListTournaments$view = function (model) {
 				$author$project$ListTournaments$viewDeleteError(model.deleteError)
 			]));
 };
-var $author$project$BulmaForm$Option = F2(
-	function (value, display) {
-		return {display: display, value: value};
-	});
-var $author$project$NewTournament$StoreCategory = function (a) {
-	return {$: 'StoreCategory', a: a};
+var $author$project$Login$StoreEmail = function (a) {
+	return {$: 'StoreEmail', a: a};
 };
-var $author$project$NewTournament$StoreDate = function (a) {
-	return {$: 'StoreDate', a: a};
+var $author$project$Login$StorePassword = function (a) {
+	return {$: 'StorePassword', a: a};
 };
-var $author$project$NewTournament$StoreName = function (a) {
-	return {$: 'StoreName', a: a};
-};
-var $author$project$NewTournament$StoreTshURL = function (a) {
-	return {$: 'StoreTshURL', a: a};
-};
-var $author$project$NewTournament$Submit = {$: 'Submit'};
+var $author$project$Login$Submit = {$: 'Submit'};
 var $author$project$BulmaForm$buttonInput = function (params) {
 	return A2(
 		$elm$html$Html$div,
@@ -7568,6 +7694,7 @@ var $author$project$BulmaForm$buttonInput = function (params) {
 			]));
 };
 var $elm$html$Html$form = _VirtualDom_node('form');
+var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$html$Html$label = _VirtualDom_node('label');
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
@@ -7600,6 +7727,114 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			$elm$html$Html$Events$alwaysStop,
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
+var $author$project$BulmaForm$textInput = function (params) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('field')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$label,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('label')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(params.label)
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('control')
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('input'),
+								$elm$html$Html$Attributes$type_(params.type_),
+								$elm$html$Html$Attributes$placeholder(params.placeholder),
+								$elm$html$Html$Events$onInput(params.oninput)
+							]),
+						_List_Nil)
+					]))
+			]));
+};
+var $author$project$Login$loginForm = A2(
+	$elm$html$Html$form,
+	_List_Nil,
+	_List_fromArray(
+		[
+			$author$project$BulmaForm$textInput(
+			{label: 'Email', oninput: $author$project$Login$StoreEmail, placeholder: 'my@email.com', type_: 'text'}),
+			$author$project$BulmaForm$textInput(
+			{label: 'Password', oninput: $author$project$Login$StorePassword, placeholder: '', type_: 'password'}),
+			$author$project$BulmaForm$buttonInput(
+			{label: 'Submit', onclick: $author$project$Login$Submit})
+		]));
+var $author$project$Login$viewError = function (maybeError) {
+	if (maybeError.$ === 'Just') {
+		var error = maybeError.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h3,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Couldn\'t log in at this time.')
+						])),
+					$elm$html$Html$text('Error: ' + error)
+				]));
+	} else {
+		return $elm$html$Html$text('');
+	}
+};
+var $author$project$Login$view = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$h3,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Log in')
+					])),
+				$author$project$Login$loginForm,
+				$author$project$Login$viewError(model.loginError)
+			]));
+};
+var $author$project$BulmaForm$Option = F2(
+	function (value, display) {
+		return {display: display, value: value};
+	});
+var $author$project$NewTournament$StoreCategory = function (a) {
+	return {$: 'StoreCategory', a: a};
+};
+var $author$project$NewTournament$StoreDate = function (a) {
+	return {$: 'StoreDate', a: a};
+};
+var $author$project$NewTournament$StoreName = function (a) {
+	return {$: 'StoreName', a: a};
+};
+var $author$project$NewTournament$StoreTshURL = function (a) {
+	return {$: 'StoreTshURL', a: a};
+};
+var $author$project$NewTournament$Submit = {$: 'Submit'};
 var $elm$html$Html$option = _VirtualDom_node('option');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$BulmaForm$optionfn = function (opt) {
@@ -7658,48 +7893,6 @@ var $author$project$BulmaForm$selectInput = function (params) {
 									]),
 								A2($elm$core$List$map, $author$project$BulmaForm$optionfn, params.options))
 							]))
-					]))
-			]));
-};
-var $elm$html$Html$input = _VirtualDom_node('input');
-var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
-var $author$project$BulmaForm$textInput = function (params) {
-	return A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('field')
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$label,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('label')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text(params.label)
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('control')
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$input,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('input'),
-								$elm$html$Html$Attributes$type_(params.type_),
-								$elm$html$Html$Attributes$placeholder(params.placeholder),
-								$elm$html$Html$Events$onInput(params.oninput)
-							]),
-						_List_Nil)
 					]))
 			]));
 };
@@ -7990,12 +8183,18 @@ var $author$project$Main$currentView = function (model) {
 				$elm$html$Html$map,
 				$author$project$Main$StandingsPageMsg,
 				$author$project$Standings$view(pageModel));
-		default:
+		case 'NewTournamentPage':
 			var pageModel = _v0.a;
 			return A2(
 				$elm$html$Html$map,
 				$author$project$Main$NewTournamentPageMsg,
 				$author$project$NewTournament$view(pageModel));
+		default:
+			var pageModel = _v0.a;
+			return A2(
+				$elm$html$Html$map,
+				$author$project$Main$LoginPageMsg,
+				$author$project$Login$view(pageModel));
 	}
 };
 var $elm$html$Html$nav = _VirtualDom_node('nav');
@@ -8586,7 +8785,7 @@ var $author$project$Main$userOrLogin = function (model) {
 			$elm$html$Html$a,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('button')
+					$elm$html$Html$Attributes$href('/login')
 				]),
 			_List_fromArray(
 				[

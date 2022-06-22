@@ -82,6 +82,9 @@ func (s *Service) AddTournament(ctx context.Context, req *proto.AddTournamentReq
 	if err != nil {
 		return nil, err
 	}
+	if req.Name == "" {
+		return nil, errors.New("name required")
+	}
 	contents, err := tshFileContents(req.TshUrl)
 	if err != nil {
 		return nil, err

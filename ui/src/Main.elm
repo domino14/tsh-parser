@@ -3,10 +3,11 @@ module Main exposing (..)
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, href)
 import Json.Decode as Decode
 import Jwt
 import ListTournaments
+import Login
 import NewTournament
 import Route exposing (Route(..))
 import SingleStanding exposing (Standing)
@@ -39,6 +40,7 @@ type Page
     | TournamentListPage ListTournaments.Model
     | StandingsPage Standings.Model
     | NewTournamentPage NewTournament.Model
+    | LoginPage Login.Model
 
 
 type Msg
@@ -47,6 +49,7 @@ type Msg
     | UrlChanged Url
     | NewTournamentPageMsg NewTournament.Msg
     | StandingsPageMsg Standings.Msg
+    | LoginPageMsg Login.Msg
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -90,6 +93,13 @@ initCurrentPage ( model, existingCmds ) =
                             NewTournament.init model.navKey
                     in
                     ( NewTournamentPage pageModel, Cmd.map NewTournamentPageMsg pageCmd )
+
+                Route.Login ->
+                    let
+                        ( pageModel, pageCmd ) =
+                            Login.init model.navKey
+                    in
+                    ( LoginPage pageModel, Cmd.map LoginPageMsg pageCmd )
     in
     ( { model | page = currentPage }
     , Cmd.batch [ existingCmds, mappedPageCmds ]
@@ -130,7 +140,7 @@ userOrLogin model =
     in
     case email of
         Err _ ->
-            a [ class "button" ] [ text "Log in" ]
+            a [ href "/login" ] [ text "Log in" ]
 
         Ok actualEmail ->
             span [] [ text ("Logged in as " ++ actualEmail) ]
@@ -166,6 +176,10 @@ currentView model =
             NewTournament.view pageModel
                 |> Html.map NewTournamentPageMsg
 
+        LoginPage pageModel ->
+            Login.view pageModel
+                |> Html.map LoginPageMsg
+
 
 notFoundView : Html msg
 notFoundView =
@@ -200,6 +214,18 @@ update msg model =
             in
             ( { model | page = NewTournamentPage updatedPageModel }
             , Cmd.map NewTournamentPageMsg updatedCmd
+            )
+
+        ( LoginPageMsg subMsg, LoginPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    Login.update subMsg pageModel
+            in
+            ( { model
+                | page = LoginPage updatedPageModel
+                , jwt = updatedPageModel.token -- is there something better than passing it this way?
+              }
+            , Cmd.map LoginPageMsg updatedCmd
             )
 
         ( LinkClicked urlRequest, _ ) ->

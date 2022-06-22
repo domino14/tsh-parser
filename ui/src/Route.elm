@@ -10,6 +10,7 @@ type Route
     | Tournaments
     | Standings
     | NewTournament
+    | Login
 
 
 parseUrl : Url -> Route
@@ -29,6 +30,7 @@ matchRoute =
         , map Tournaments (s "tournaments")
         , map Standings (s "standings")
         , map NewTournament (s "tournaments" </> s "new")
+        , map Login (s "login")
         ]
 
 
@@ -52,3 +54,6 @@ routeToString route =
 
         NewTournament ->
             "/tournaments/new"
+
+        Login ->
+            "/login"
