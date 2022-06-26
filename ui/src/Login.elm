@@ -6,9 +6,11 @@ import Errors exposing (buildErrorMessage)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
+import Http.Detailed
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
 import Route exposing (Route(..))
+import Session exposing (buildExpect)
 
 
 type alias LoginRequest =
@@ -47,7 +49,7 @@ type Msg
     = StoreEmail String
     | StorePassword String
     | Submit
-    | LoggedIn (Result Http.Error LoginResponse)
+    | LoggedIn (Result (Http.Detailed.Error String) ( Http.Metadata, String ))
 
 
 init : Nav.Key -> ( Model, Cmd Msg )
@@ -137,7 +139,7 @@ requestJWT req =
     Http.post
         { url = "http://localhost:8082/twirp/tshparser.AuthenticationService/GetJWT"
         , body = Http.jsonBody (reqEncoder req)
-        , expect = Http.expectJson LoggedIn loginResponseDecoder
+        , expect = buildExpect loginResponseDecoder LoggedIn
         }
 
 

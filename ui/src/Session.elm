@@ -1,6 +1,10 @@
 module Session exposing (..)
 
 import Http
+import Http.Detailed
+import Json.Decode exposing (Decoder)
+import RemoteData exposing (RemoteData)
+import WebUtils exposing (DetailedWebData)
 
 
 type alias Session =
@@ -19,3 +23,20 @@ twirpReq sess service method expect body =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+buildExpect : Decoder a -> (DetailedWebData a -> msg) -> Http.Expect msg
+buildExpect decoder msg =
+    decoder
+        |> Http.Detailed.expectJson
+            (\result ->
+                (case result of
+                    Err err ->
+                        Err err
+
+                    Ok ( metadata, a ) ->
+                        Ok a
+                )
+                    |> RemoteData.fromResult
+                    |> msg
+            )

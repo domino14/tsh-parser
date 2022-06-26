@@ -6,14 +6,16 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
+import Http.Detailed
 import Json.Encode as Encode
-import RemoteData exposing (WebData)
-import Session exposing (Session, twirpReq)
+import RemoteData exposing (RemoteData, WebData)
+import Session exposing (Session, buildExpect, twirpReq)
 import Tournament exposing (Tournament, tournamentsResponseDecoder)
+import WebUtils exposing (DetailedWebData)
 
 
 type alias Model =
-    { tournaments : WebData (List Tournament)
+    { tournaments : DetailedWebData (List Tournament)
     , dateRange : DateRange
     , deleteError : Maybe String
     }
@@ -21,9 +23,9 @@ type alias Model =
 
 type Msg
     = FetchTournaments DateRange
-    | TournamentsReceived (WebData (List Tournament))
+    | TournamentsReceived (DetailedWebData (List Tournament))
     | DeleteTournament String
-    | TournamentDeleted (Result Http.Error String)
+    | TournamentDeleted (Result (Http.Detailed.Error String) ( Http.Metadata, String ))
 
 
 init : ( Model, Cmd Msg )
@@ -46,9 +48,7 @@ fetchTournaments dateRange =
     Http.post
         -- XXX: use some sort of env var on prod?
         { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/GetTournaments"
-        , expect =
-            tournamentsResponseDecoder
-                |> Http.expectJson (RemoteData.fromResult >> TournamentsReceived)
+        , expect = buildExpect tournamentsResponseDecoder TournamentsReceived
         , body = Http.jsonBody (dateRangeEncoder dateRange)
         }
 
@@ -80,7 +80,7 @@ deleteTournament sess tid =
         sess
         "TournamentRankerService"
         "RemoveTournament"
-        (Http.expectString TournamentDeleted)
+        (Http.Detailed.expectString TournamentDeleted)
         (Http.jsonBody (tourneyIDEncoder tid))
 
 
@@ -115,7 +115,7 @@ view model =
         ]
 
 
-viewTournaments : WebData (List Tournament) -> Html Msg
+viewTournaments : DetailedWebData (List Tournament) -> Html Msg
 viewTournaments tournaments =
     case tournaments of
         RemoteData.NotAsked ->

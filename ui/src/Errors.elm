@@ -1,22 +1,20 @@
 module Errors exposing (..)
 
 import Http
+import Http.Detailed
 
 
-buildErrorMessage : Http.Error -> String
+buildErrorMessage : Http.Detailed.Error String -> String
 buildErrorMessage httpError =
-    case httpError of
-        Http.BadUrl message ->
-            message
-
-        Http.Timeout ->
-            "Server is taking too long to respond. Please try again later."
-
-        Http.NetworkError ->
-            "Unable to reach server."
-
-        Http.BadStatus statusCode ->
-            "Request failed with status code: " ++ String.fromInt statusCode
-
-        Http.BadBody message ->
-            message
+    -- case httpError of
+    --     Http.BadUrl message ->
+    --         message
+    --     Http.Timeout ->
+    --         "Server is taking too long to respond. Please try again later."
+    --     Http.NetworkError ->
+    --         "Unable to reach server."
+    --     Http.BadStatus statusCode ->
+    --         "Request failed with status code: " ++ String.fromInt statusCode
+    --     Http.BadBody message ->
+    --         message
+    Debug.toString httpError

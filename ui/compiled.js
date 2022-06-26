@@ -6586,7 +6586,11 @@ var $author$project$Standings$fetchStandings = function (dateRange) {
 };
 var $author$project$Standings$init = function () {
 	var model = {
+		aliasCreationError: $elm$core$Maybe$Nothing,
 		dateRange: {beginDate: '2022-01-01T00:00:00Z', endDate: '2023-01-01T00:00:00Z'},
+		modalVisible: false,
+		potentialAlias: '',
+		potentialRealName: '',
 		standings: $krisajenkins$remotedata$RemoteData$Loading
 	};
 	return _Utils_Tuple2(
@@ -7283,22 +7287,94 @@ var $author$project$NewTournament$update = F3(
 				}
 		}
 	});
-var $author$project$Standings$update = F2(
-	function (msg, model) {
-		if (msg.$ === 'FetchStandings') {
-			var dateRange = msg.a;
-			return _Utils_Tuple2(
-				_Utils_update(
+var $author$project$Standings$AliasCreated = function (a) {
+	return {$: 'AliasCreated', a: a};
+};
+var $author$project$Standings$AliasRequest = F2(
+	function (realname, alias) {
+		return {alias: alias, realname: realname};
+	});
+var $author$project$Standings$aliasReqEncoder = function (req) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'original_player',
+				$elm$json$Json$Encode$string(req.realname)),
+				_Utils_Tuple2(
+				'alias',
+				$elm$json$Json$Encode$string(req.alias))
+			]));
+};
+var $author$project$Standings$createAlias = F3(
+	function (sess, alias_, realname) {
+		return A5(
+			$author$project$Session$twirpReq,
+			sess,
+			'TournamentRankerService',
+			'AddPlayerAlias',
+			$elm$http$Http$expectString($author$project$Standings$AliasCreated),
+			$elm$http$Http$jsonBody(
+				$author$project$Standings$aliasReqEncoder(
+					A2($author$project$Standings$AliasRequest, realname, alias_))));
+	});
+var $author$project$Standings$update = F3(
+	function (sess, msg, model) {
+		switch (msg.$) {
+			case 'FetchStandings':
+				var dateRange = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{standings: $krisajenkins$remotedata$RemoteData$Loading}),
+					$author$project$Standings$fetchStandings(dateRange));
+			case 'StandingsReceived':
+				var response = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{standings: response}),
+					$elm$core$Platform$Cmd$none);
+			case 'OpenAliasModal':
+				var playerName = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{modalVisible: true, potentialAlias: playerName}),
+					$elm$core$Platform$Cmd$none);
+			case 'CloseAliasModal':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{modalVisible: false, potentialAlias: ''}),
+					$elm$core$Platform$Cmd$none);
+			case 'StoreRealName':
+				var realName = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{potentialRealName: realName}),
+					$elm$core$Platform$Cmd$none);
+			case 'SubmitAlias':
+				return _Utils_Tuple2(
 					model,
-					{standings: $krisajenkins$remotedata$RemoteData$Loading}),
-				$author$project$Standings$fetchStandings(dateRange));
-		} else {
-			var response = msg.a;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{standings: response}),
-				$elm$core$Platform$Cmd$none);
+					A3($author$project$Standings$createAlias, sess, model.potentialAlias, model.potentialRealName));
+			default:
+				if (msg.a.$ === 'Ok') {
+					return _Utils_Tuple2(
+						model,
+						$author$project$Standings$fetchStandings(model.dateRange));
+				} else {
+					var error = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								aliasCreationError: $elm$core$Maybe$Just(
+									$author$project$Errors$buildErrorMessage(error))
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $author$project$Main$update = F2(
@@ -7328,7 +7404,7 @@ var $author$project$Main$update = F2(
 					if (_v0.b.$ === 'StandingsPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v2 = A2($author$project$Standings$update, subMsg, pageModel);
+						var _v2 = A3($author$project$Standings$update, model.session, subMsg, pageModel);
 						var updatedPageModel = _v2.a;
 						var updatedCmd = _v2.b;
 						return _Utils_Tuple2(
@@ -7988,7 +8064,137 @@ var $author$project$NewTournament$view = function (model) {
 				$author$project$NewTournament$viewError(model.createError)
 			]));
 };
+var $author$project$Standings$CloseAliasModal = {$: 'CloseAliasModal'};
+var $author$project$Standings$StoreRealName = function (a) {
+	return {$: 'StoreRealName', a: a};
+};
+var $author$project$Standings$SubmitAlias = {$: 'SubmitAlias'};
+var $elm$html$Html$footer = _VirtualDom_node('footer');
+var $elm$html$Html$header = _VirtualDom_node('header');
+var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$section = _VirtualDom_node('section');
+var $author$project$Standings$viewAliasError = function (maybeError) {
+	if (maybeError.$ === 'Just') {
+		var error = maybeError.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h3,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Couldn\'t create alias at this time.')
+						])),
+					$elm$html$Html$text('Error: ' + error)
+				]));
+	} else {
+		return $elm$html$Html$text('');
+	}
+};
+var $author$project$Standings$viewAliasModal = F3(
+	function (visible, potentialAlias, aliasCreationError) {
+		var visibleModifier = visible ? 'is-active' : '';
+		var modalClass = 'modal ' + visibleModifier;
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class(modalClass)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('modal-background'),
+							$elm$html$Html$Events$onClick($author$project$Standings$CloseAliasModal)
+						]),
+					_List_Nil),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('modal-card')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$header,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('modal-card-head')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('modal-card-title')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Editing alias: ' + potentialAlias)
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('delete'),
+											$elm$html$Html$Events$onClick($author$project$Standings$CloseAliasModal)
+										]),
+									_List_Nil)
+								])),
+							A2(
+							$elm$html$Html$section,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('modal-card-body')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Please type in a player name that you want ' + (potentialAlias + ' to be an alias of. '))
+										])),
+									A2(
+									$elm$html$Html$p,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Please make sure to type it in **exactly**, with commas as needed.')
+										])),
+									A2($elm$html$Html$br, _List_Nil, _List_Nil),
+									A2($elm$html$Html$br, _List_Nil, _List_Nil),
+									$author$project$BulmaForm$textInput(
+									{label: 'Real name', oninput: $author$project$Standings$StoreRealName, placeholder: 'Richards, Nigel', type_: 'text'}),
+									$author$project$BulmaForm$buttonInput(
+									{label: 'Submit', onclick: $author$project$Standings$SubmitAlias}),
+									A2($elm$html$Html$br, _List_Nil, _List_Nil),
+									$author$project$Standings$viewAliasError(aliasCreationError)
+								])),
+							A2(
+							$elm$html$Html$footer,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('model-card-foot')
+								]),
+							_List_Nil)
+						]))
+				]));
+	});
+var $author$project$Standings$OpenAliasModal = function (a) {
+	return {$: 'OpenAliasModal', a: a};
+};
 var $elm$core$String$fromFloat = _String_fromNumber;
+var $elm$html$Html$span = _VirtualDom_node('span');
 var $author$project$Standings$viewStanding = function (standing) {
 	return A2(
 		$elm$html$Html$tr,
@@ -8008,7 +8214,18 @@ var $author$project$Standings$viewStanding = function (standing) {
 				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text(standing.playerName)
+						A2(
+						$elm$html$Html$span,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('has-text-link is-clickable'),
+								$elm$html$Html$Events$onClick(
+								$author$project$Standings$OpenAliasModal(standing.playerName))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text(standing.playerName)
+							]))
 					])),
 				A2(
 				$elm$html$Html$td,
@@ -8190,7 +8407,8 @@ var $author$project$Standings$view = function (model) {
 		_List_Nil,
 		_List_fromArray(
 			[
-				$author$project$Standings$viewStandings(model.standings)
+				$author$project$Standings$viewStandings(model.standings),
+				A3($author$project$Standings$viewAliasModal, model.modalVisible, model.potentialAlias, model.aliasCreationError)
 			]));
 };
 var $author$project$Main$currentView = function (model) {
@@ -8804,7 +9022,6 @@ var $author$project$Main$jwtDecoder = A2($elm$json$Json$Decode$field, 'sub', $el
 var $author$project$Main$emailFromJwt = function (jwt) {
 	return A2($simonh1000$elm_jwt$Jwt$decodeToken, $author$project$Main$jwtDecoder, jwt);
 };
-var $elm$html$Html$span = _VirtualDom_node('span');
 var $author$project$Main$userOrLogin = function (model) {
 	var email = $author$project$Main$emailFromJwt(model.session.jwt);
 	if (email.$ === 'Err') {

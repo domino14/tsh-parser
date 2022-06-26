@@ -202,7 +202,7 @@ update msg model =
         ( StandingsPageMsg subMsg, StandingsPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    Standings.update subMsg pageModel
+                    Standings.update model.session subMsg pageModel
             in
             ( { model | page = StandingsPage updatedPageModel }
             , Cmd.map StandingsPageMsg updatedCmd
