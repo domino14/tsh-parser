@@ -45,16 +45,14 @@ init =
 
 fetchTournaments : DateRange -> Cmd Msg
 fetchTournaments dateRange =
-    Http.post
-        -- XXX: use some sort of env var on prod?
-        { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/GetTournaments"
-        , expect = buildExpect tournamentsResponseDecoder TournamentsReceived
-        , body = Http.jsonBody (dateRangeEncoder dateRange)
-        }
+    twirpReq "TournamentRankerService"
+        "GetTournaments"
+        (buildExpect tournamentsResponseDecoder TournamentsReceived)
+        (Http.jsonBody (dateRangeEncoder dateRange))
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update session msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         FetchTournaments dateRange ->
             ( { model | tournaments = RemoteData.Loading }, fetchTournaments dateRange )
@@ -63,7 +61,7 @@ update session msg model =
             ( { model | tournaments = response }, Cmd.none )
 
         DeleteTournament tid ->
-            ( model, deleteTournament session tid )
+            ( model, deleteTournament tid )
 
         TournamentDeleted (Ok _) ->
             ( model, fetchTournaments model.dateRange )
@@ -74,10 +72,9 @@ update session msg model =
             )
 
 
-deleteTournament : Session -> String -> Cmd Msg
-deleteTournament sess tid =
+deleteTournament : String -> Cmd Msg
+deleteTournament tid =
     twirpReq
-        sess
         "TournamentRankerService"
         "RemoveTournament"
         (Http.Detailed.expectString TournamentDeleted)

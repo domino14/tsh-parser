@@ -6,11 +6,12 @@ import Errors exposing (buildErrorMessage)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
-import Http.Detailed
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
+import RemoteData
 import Route exposing (Route(..))
 import Session exposing (buildExpect)
+import WebUtils
 
 
 type alias LoginRequest =
@@ -41,7 +42,6 @@ type alias Model =
     { loginRequest : LoginRequest
     , loginError : Maybe String
     , navKey : Nav.Key
-    , token : String
     }
 
 
@@ -49,7 +49,7 @@ type Msg
     = StoreEmail String
     | StorePassword String
     | Submit
-    | LoggedIn (Result (Http.Detailed.Error String) ( Http.Metadata, String ))
+    | LoggedIn (WebUtils.DetailedWebData LoginResponse)
 
 
 init : Nav.Key -> ( Model, Cmd Msg )
@@ -62,7 +62,6 @@ initialModel navKey =
     { navKey = navKey
     , loginRequest = LoginRequest "" ""
     , loginError = Nothing
-    , token = ""
     }
 
 
@@ -123,15 +122,20 @@ update msg model =
         Submit ->
             ( model, requestJWT model.loginRequest )
 
-        LoggedIn (Ok loginResponse) ->
-            ( { model | loginError = Nothing, token = loginResponse.token }
-            , Route.pushUrl Route.Tournaments model.navKey
-            )
+        LoggedIn loginResponse ->
+            case loginResponse of
+                RemoteData.Success _ ->
+                    ( { model | loginError = Nothing }
+                    , Route.pushUrl Route.Tournaments model.navKey
+                    )
 
-        LoggedIn (Err error) ->
-            ( { model | loginError = Just (buildErrorMessage error) }
-            , Cmd.none
-            )
+                RemoteData.Failure detailedError ->
+                    ( { model | loginError = Just (buildErrorMessage detailedError) }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 requestJWT : LoginRequest -> Cmd Msg

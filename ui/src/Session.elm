@@ -12,16 +12,12 @@ type alias Session =
     }
 
 
-twirpReq : Session -> String -> String -> Http.Expect msg -> Http.Body -> Cmd msg
-twirpReq sess service method expect body =
-    Http.request
-        { method = "POST"
-        , headers = [ Http.header "Authorization" ("Bearer " ++ sess.jwt) ]
-        , url = "http://localhost:8082/twirp/tshparser." ++ service ++ "/" ++ method
+twirpReq : String -> String -> Http.Expect msg -> Http.Body -> Cmd msg
+twirpReq service method expect body =
+    Http.post
+        { url = "http://localhost:8082/twirp/tshparser." ++ service ++ "/" ++ method
         , body = body
         , expect = expect
-        , timeout = Nothing
-        , tracker = Nothing
         }
 
 
@@ -34,7 +30,7 @@ buildExpect decoder msg =
                     Err err ->
                         Err err
 
-                    Ok ( metadata, a ) ->
+                    Ok ( _, a ) ->
                         Ok a
                 )
                     |> RemoteData.fromResult
