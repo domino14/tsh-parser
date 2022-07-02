@@ -98,7 +98,9 @@ func main() {
 			method := path[len(path)-1]
 			hlog.FromRequest(r).Info().Str("method", method).Int("status", status).Dur("duration", d).Msg("")
 		}),
-		parser.JWTMiddlewareGenerator(),
+		parser.ExposeResponseWriterMiddleware,
+		parser.AuthenticationMiddleware,
+		parser.JWTMiddleware,
 		CORS,
 	)
 

@@ -74,6 +74,7 @@ func (a *AuthService) GetJWT(ctx context.Context, req *proto.JWTRequest) (*proto
 	if err != nil {
 		return nil, err
 	}
+	SetDefaultCookie(ctx, tokenString)
 	return &proto.JWTResponse{Token: tokenString}, nil
 }
 
