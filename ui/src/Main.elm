@@ -141,10 +141,6 @@ view model =
     }
 
 
-
--- we only care about the "sub" field here.
-
-
 jwtDecoder : Decode.Decoder String
 jwtDecoder =
     Decode.field "sub" Decode.string

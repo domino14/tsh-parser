@@ -1,6 +1,6 @@
 module Login exposing (..)
 
-import Browser.Navigation as Nav
+import Browser.Navigation as Nav exposing (load)
 import BulmaForm exposing (buttonInput, textInput)
 import Errors exposing (buildErrorMessage)
 import Html exposing (..)
@@ -10,7 +10,7 @@ import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
 import RemoteData
 import Route exposing (Route(..))
-import WebUtils exposing (buildExpect)
+import WebUtils exposing (buildExpect, twirpReq)
 
 
 type alias LoginRequest =
@@ -125,7 +125,7 @@ update msg model =
             case loginResponse of
                 RemoteData.Success _ ->
                     ( { model | loginError = Nothing }
-                    , Route.pushUrl Route.Tournaments model.navKey
+                    , load "/"
                     )
 
                 RemoteData.Failure detailedError ->
@@ -139,11 +139,11 @@ update msg model =
 
 requestJWT : LoginRequest -> Cmd Msg
 requestJWT req =
-    Http.post
-        { url = "/twirp/tshparser.AuthenticationService/GetJWT"
-        , body = Http.jsonBody (reqEncoder req)
-        , expect = buildExpect loginResponseDecoder LoggedIn
-        }
+    twirpReq
+        "AuthenticationService"
+        "GetJWT"
+        (buildExpect loginResponseDecoder LoggedIn)
+        (Http.jsonBody (reqEncoder req))
 
 
 viewError : Maybe String -> Html msg

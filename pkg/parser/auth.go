@@ -7,6 +7,7 @@ import (
 
 	"github.com/domino14/tshparser/rpc/proto"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/twitchtv/twirp"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -59,10 +60,10 @@ func doPasswordsMatch(hashedPassword, currPassword string) bool {
 func (a *AuthService) GetJWT(ctx context.Context, req *proto.JWTRequest) (*proto.JWTResponse, error) {
 	user, err := a.store.GetUser(ctx, req.Email)
 	if err != nil {
-		return nil, err
+		return nil, twirp.NewError(twirp.PermissionDenied, "not found")
 	}
 	if !doPasswordsMatch(user.PasswordHash, req.Password) {
-		return nil, errors.New("passwords do not match")
+		return nil, twirp.NewError(twirp.PermissionDenied, "password incorrect")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -72,7 +73,7 @@ func (a *AuthService) GetJWT(ctx context.Context, req *proto.JWTRequest) (*proto
 	})
 	tokenString, err := token.SignedString([]byte(a.secretKey))
 	if err != nil {
-		return nil, err
+		return nil, twirp.WrapError(twirp.NewError(twirp.Internal, "something went wrong"), err)
 	}
 	SetDefaultCookie(ctx, tokenString)
 	return &proto.JWTResponse{Token: tokenString}, nil

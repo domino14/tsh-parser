@@ -6807,9 +6807,28 @@ var $elm$url$Url$toString = function (url) {
 					_Utils_ap(http, url.host)),
 				url.path)));
 };
-var $elm$core$Debug$toString = _Debug_toString;
+var $author$project$Errors$TwirpError = F2(
+	function (code, msg) {
+		return {code: code, msg: msg};
+	});
+var $author$project$Errors$jsonErrorDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Errors$TwirpError,
+	A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'msg', $elm$json$Json$Decode$string));
 var $author$project$Errors$buildErrorMessage = function (httpError) {
-	return $elm$core$Debug$toString(httpError);
+	if (httpError.$ === 'BadStatus') {
+		var body = httpError.b;
+		var res = A2($elm$json$Json$Decode$decodeString, $author$project$Errors$jsonErrorDecoder, body);
+		if (res.$ === 'Ok') {
+			var twirpError = res.a;
+			return twirpError.msg;
+		} else {
+			return body;
+		}
+	} else {
+		return 'Other http error';
+	}
 };
 var $author$project$ListTournaments$TournamentDeleted = function (a) {
 	return {$: 'TournamentDeleted', a: a};
@@ -6886,27 +6905,6 @@ var $author$project$ListTournaments$update = F2(
 				}
 		}
 	});
-var $author$project$Route$routeToString = function (route) {
-	switch (route.$) {
-		case 'NotFound':
-			return '/not-found';
-		case 'Tournaments':
-			return '/tournaments';
-		case 'Standings':
-			return '/standings';
-		case 'NewTournament':
-			return '/tournaments/new';
-		default:
-			return '/login';
-	}
-};
-var $author$project$Route$pushUrl = F2(
-	function (route, navKey) {
-		return A2(
-			$elm$browser$Browser$Navigation$pushUrl,
-			navKey,
-			$author$project$Route$routeToString(route));
-	});
 var $author$project$Login$LoggedIn = function (a) {
 	return {$: 'LoggedIn', a: a};
 };
@@ -6930,13 +6928,13 @@ var $author$project$Login$reqEncoder = function (req) {
 			]));
 };
 var $author$project$Login$requestJWT = function (req) {
-	return $elm$http$Http$post(
-		{
-			body: $elm$http$Http$jsonBody(
-				$author$project$Login$reqEncoder(req)),
-			expect: A2($author$project$WebUtils$buildExpect, $author$project$Login$loginResponseDecoder, $author$project$Login$LoggedIn),
-			url: '/twirp/tshparser.AuthenticationService/GetJWT'
-		});
+	return A4(
+		$author$project$WebUtils$twirpReq,
+		'AuthenticationService',
+		'GetJWT',
+		A2($author$project$WebUtils$buildExpect, $author$project$Login$loginResponseDecoder, $author$project$Login$LoggedIn),
+		$elm$http$Http$jsonBody(
+			$author$project$Login$reqEncoder(req)));
 };
 var $author$project$Login$update = F2(
 	function (msg, model) {
@@ -6975,7 +6973,7 @@ var $author$project$Login$update = F2(
 							_Utils_update(
 								model,
 								{loginError: $elm$core$Maybe$Nothing}),
-							A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
+							$elm$browser$Browser$Navigation$load('/'));
 					case 'Failure':
 						var detailedError = loginResponse.a;
 						return _Utils_Tuple2(
@@ -7028,6 +7026,27 @@ var $author$project$NewTournament$createTournament = function (req) {
 		$elm$http$Http$jsonBody(
 			$author$project$NewTournament$reqEncoder(req)));
 };
+var $author$project$Route$routeToString = function (route) {
+	switch (route.$) {
+		case 'NotFound':
+			return '/not-found';
+		case 'Tournaments':
+			return '/tournaments';
+		case 'Standings':
+			return '/standings';
+		case 'NewTournament':
+			return '/tournaments/new';
+		default:
+			return '/login';
+	}
+};
+var $author$project$Route$pushUrl = F2(
+	function (route, navKey) {
+		return A2(
+			$elm$browser$Browser$Navigation$pushUrl,
+			navKey,
+			$author$project$Route$routeToString(route));
+	});
 var $author$project$NewTournament$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
