@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/domino14/tshparser/pkg/parser"
-	"github.com/domino14/tshparser/rpc/proto"
+	proto "github.com/domino14/tshparser/rpc"
 )
 
 type Config struct {

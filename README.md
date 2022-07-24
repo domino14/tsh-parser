@@ -10,10 +10,10 @@ docker-compose up
 
 # protoc
 
-To generate pb files, run this in the base directory:
+To generate pb files, run this in the `proto` directory:
 
 ```
-protoc --twirp_out=rpc --go_out=rpc --go_opt=paths=source_relative --twirp_opt=paths=source_relative ./proto/tshparser.proto ./proto/auth.proto
+go generate
 ```
 
 Make sure you have done

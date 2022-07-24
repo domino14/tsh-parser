@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/domino14/tshparser/rpc/proto"
+	proto "github.com/domino14/tshparser/rpc"
 	_ "github.com/mattn/go-sqlite3"
 )
 

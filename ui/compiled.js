@@ -6234,6 +6234,12 @@ var $author$project$Main$fetchWhoAmI = A4(
 	'WhoAmI',
 	A2($author$project$WebUtils$buildExpect, $author$project$Main$whoAmIResponseDecoder, $author$project$Main$WhoAmIReceived),
 	A2($elm$http$Http$stringBody, 'application/json', '{}'));
+var $author$project$Main$AliasesPage = function (a) {
+	return {$: 'AliasesPage', a: a};
+};
+var $author$project$Main$AliasesPageMsg = function (a) {
+	return {$: 'AliasesPageMsg', a: a};
+};
 var $author$project$Main$ListPageMsg = function (a) {
 	return {$: 'ListPageMsg', a: a};
 };
@@ -6259,6 +6265,33 @@ var $author$project$Main$TournamentListPage = function (a) {
 	return {$: 'TournamentListPage', a: a};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $author$project$Aliases$AliasesReceived = function (a) {
+	return {$: 'AliasesReceived', a: a};
+};
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Aliases$PlayerAlias = F2(
+	function (correctName, alias) {
+		return {alias: alias, correctName: correctName};
+	});
+var $author$project$Aliases$playerAliasDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Aliases$PlayerAlias,
+	A2($elm$json$Json$Decode$field, 'original_player', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'alias', $elm$json$Json$Decode$string));
+var $author$project$Aliases$playerAliasResponseDecoder = A2(
+	$elm$json$Json$Decode$field,
+	'aliases',
+	$elm$json$Json$Decode$list($author$project$Aliases$playerAliasDecoder));
+var $author$project$Aliases$fetchAliases = A4(
+	$author$project$WebUtils$twirpReq,
+	'TournamentRankerService',
+	'ListPlayerAliases',
+	A2($author$project$WebUtils$buildExpect, $author$project$Aliases$playerAliasResponseDecoder, $author$project$Aliases$AliasesReceived),
+	A2($elm$http$Http$stringBody, 'application/json', '{}'));
+var $author$project$Aliases$init = function () {
+	var model = {deleteError: $elm$core$Maybe$Nothing, playerAliases: $krisajenkins$remotedata$RemoteData$Loading};
+	return _Utils_Tuple2(model, $author$project$Aliases$fetchAliases);
+}();
 var $author$project$ListTournaments$TournamentsReceived = function (a) {
 	return {$: 'TournamentsReceived', a: a};
 };
@@ -6294,7 +6327,6 @@ var $elm$http$Http$jsonBody = function (value) {
 		'application/json',
 		A2($elm$json$Json$Encode$encode, 0, value));
 };
-var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$Tournament$Tournament = F4(
 	function (id, name, category, date) {
 		return {category: category, date: date, id: id, name: name};
@@ -6466,13 +6498,20 @@ var $author$project$Main$initCurrentPage = function (_v0) {
 				return _Utils_Tuple2(
 					$author$project$Main$NewTournamentPage(pageModel),
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, pageCmd));
-			default:
+			case 'Login':
 				var _v6 = $author$project$Login$init(model.navKey);
 				var pageModel = _v6.a;
 				var pageCmd = _v6.b;
 				return _Utils_Tuple2(
 					$author$project$Main$LoginPage(pageModel),
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, pageCmd));
+			default:
+				var _v7 = $author$project$Aliases$init;
+				var pageModel = _v7.a;
+				var pageCmd = _v7.b;
+				return _Utils_Tuple2(
+					$author$project$Main$AliasesPage(pageModel),
+					A2($elm$core$Platform$Cmd$map, $author$project$Main$AliasesPageMsg, pageCmd));
 		}
 	}();
 	var currentPage = _v1.a;
@@ -6486,6 +6525,7 @@ var $author$project$Main$initCurrentPage = function (_v0) {
 				[existingCmds, mappedPageCmds])));
 };
 var $author$project$Route$NotFound = {$: 'NotFound'};
+var $author$project$Route$Aliases = {$: 'Aliases'};
 var $author$project$Route$Login = {$: 'Login'};
 var $author$project$Route$NewTournament = {$: 'NewTournament'};
 var $author$project$Route$Standings = {$: 'Standings'};
@@ -6622,7 +6662,11 @@ var $author$project$Route$matchRoute = $elm$url$Url$Parser$oneOf(
 			A2(
 			$elm$url$Url$Parser$map,
 			$author$project$Route$Login,
-			$elm$url$Url$Parser$s('login'))
+			$elm$url$Url$Parser$s('login')),
+			A2(
+			$elm$url$Url$Parser$map,
+			$author$project$Route$Aliases,
+			$elm$url$Url$Parser$s('aliases'))
 		]));
 var $elm$url$Url$Parser$getFirstMatch = function (states) {
 	getFirstMatch:
@@ -6807,6 +6851,28 @@ var $elm$url$Url$toString = function (url) {
 					_Utils_ap(http, url.host)),
 				url.path)));
 };
+var $author$project$Aliases$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'AliasesReceived':
+				var response = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{playerAliases: response}),
+					$elm$core$Platform$Cmd$none);
+			case 'DeleteAlias':
+				var theAlias = msg.a;
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			default:
+				if (msg.a.$ === 'Ok') {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					var error = msg.a.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+		}
+	});
 var $author$project$Errors$TwirpError = F2(
 	function (code, msg) {
 		return {code: code, msg: msg};
@@ -7036,8 +7102,10 @@ var $author$project$Route$routeToString = function (route) {
 			return '/standings';
 		case 'NewTournament':
 			return '/tournaments/new';
-		default:
+		case 'Login':
 			return '/login';
+		default:
+			return '/aliases';
 	}
 };
 var $author$project$Route$pushUrl = F2(
@@ -7235,7 +7303,7 @@ var $author$project$Standings$update = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.page);
-		_v0$7:
+		_v0$8:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ListPageMsg':
@@ -7253,7 +7321,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, updatedCmd));
 					} else {
-						break _v0$7;
+						break _v0$8;
 					}
 				case 'StandingsPageMsg':
 					if (_v0.b.$ === 'StandingsPage') {
@@ -7270,7 +7338,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$StandingsPageMsg, updatedCmd));
 					} else {
-						break _v0$7;
+						break _v0$8;
 					}
 				case 'NewTournamentPageMsg':
 					if (_v0.b.$ === 'NewTournamentPage') {
@@ -7287,7 +7355,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, updatedCmd));
 					} else {
-						break _v0$7;
+						break _v0$8;
 					}
 				case 'LoginPageMsg':
 					if (_v0.b.$ === 'LoginPage') {
@@ -7304,7 +7372,24 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, updatedCmd));
 					} else {
-						break _v0$7;
+						break _v0$8;
+					}
+				case 'AliasesPageMsg':
+					if (_v0.b.$ === 'AliasesPage') {
+						var subMsg = _v0.a.a;
+						var pageModel = _v0.b.a;
+						var _v5 = A2($author$project$Aliases$update, subMsg, pageModel);
+						var updatedPageModel = _v5.a;
+						var updatedCmd = _v5.b;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									page: $author$project$Main$AliasesPage(updatedPageModel)
+								}),
+							A2($elm$core$Platform$Cmd$map, $author$project$Main$AliasesPageMsg, updatedCmd));
+					} else {
+						break _v0$8;
 					}
 				case 'LinkClicked':
 					var urlRequest = _v0.a.a;
@@ -7362,6 +7447,9 @@ var $author$project$Main$notFoundView = A2(
 		[
 			$elm$html$Html$text('Oops! The page you requested was not found!')
 		]));
+var $author$project$Aliases$view = function (model) {
+	return $elm$html$Html$text('foo');
+};
 var $author$project$ListTournaments$FetchTournaments = function (a) {
 	return {$: 'FetchTournaments', a: a};
 };
@@ -8295,12 +8383,18 @@ var $author$project$Main$currentView = function (model) {
 				$elm$html$Html$map,
 				$author$project$Main$NewTournamentPageMsg,
 				$author$project$NewTournament$view(pageModel));
-		default:
+		case 'LoginPage':
 			var pageModel = _v0.a;
 			return A2(
 				$elm$html$Html$map,
 				$author$project$Main$LoginPageMsg,
 				$author$project$Login$view(pageModel));
+		default:
+			var pageModel = _v0.a;
+			return A2(
+				$elm$html$Html$map,
+				$author$project$Main$AliasesPageMsg,
+				$author$project$Aliases$view(pageModel));
 	}
 };
 var $elm$html$Html$nav = _VirtualDom_node('nav');

@@ -6,10 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/domino14/tshparser/rpc/proto"
+	proto "github.com/domino14/tshparser/rpc"
 	"github.com/rs/zerolog/log"
 )
 
@@ -186,5 +187,17 @@ func (s *Service) ListPlayerAliases(ctx context.Context, req *proto.ListPlayerAl
 	if err != nil {
 		return nil, err
 	}
-	return &proto.PlayerAliasesResponse{Aliases: aliases}, nil
+	// aliases is a map; convert to a sorted list of aliases:
+	aliasList := []*proto.PlayerAlias{}
+	for alias, orig := range aliases {
+		aliasList = append(aliasList, &proto.PlayerAlias{
+			OriginalPlayer: orig,
+			Alias:          alias,
+		})
+	}
+	sort.Slice(aliasList, func(i, j int) bool {
+		return aliasList[i].OriginalPlayer < aliasList[j].OriginalPlayer
+	})
+
+	return &proto.PlayerAliasesResponse{Aliases: aliasList}, nil
 }

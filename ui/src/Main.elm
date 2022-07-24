@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Aliases
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
@@ -49,6 +50,7 @@ type Page
     | StandingsPage Standings.Model
     | NewTournamentPage NewTournament.Model
     | LoginPage Login.Model
+    | AliasesPage Aliases.Model
 
 
 type Msg
@@ -58,6 +60,7 @@ type Msg
     | NewTournamentPageMsg NewTournament.Msg
     | StandingsPageMsg Standings.Msg
     | LoginPageMsg Login.Msg
+    | AliasesPageMsg Aliases.Msg
     | WhoAmIReceived (DetailedWebData User)
 
 
@@ -123,6 +126,13 @@ initCurrentPage ( model, existingCmds ) =
                             Login.init model.navKey
                     in
                     ( LoginPage pageModel, Cmd.map LoginPageMsg pageCmd )
+
+                Route.Aliases ->
+                    let
+                        ( pageModel, pageCmd ) =
+                            Aliases.init
+                    in
+                    ( AliasesPage pageModel, Cmd.map AliasesPageMsg pageCmd )
     in
     ( { model | page = currentPage }
     , Cmd.batch [ existingCmds, mappedPageCmds ]
@@ -201,6 +211,10 @@ currentView model =
             Login.view pageModel
                 |> Html.map LoginPageMsg
 
+        AliasesPage pageModel ->
+            Aliases.view pageModel
+                |> Html.map AliasesPageMsg
+
 
 notFoundView : Html msg
 notFoundView =
@@ -246,6 +260,17 @@ update msg model =
                 | page = LoginPage updatedPageModel
               }
             , Cmd.map LoginPageMsg updatedCmd
+            )
+
+        ( AliasesPageMsg subMsg, AliasesPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    Aliases.update subMsg pageModel
+            in
+            ( { model
+                | page = AliasesPage updatedPageModel
+              }
+            , Cmd.map AliasesPageMsg updatedCmd
             )
 
         ( LinkClicked urlRequest, _ ) ->

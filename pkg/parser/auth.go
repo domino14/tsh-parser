@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/domino14/tshparser/rpc/proto"
+	proto "github.com/domino14/tshparser/rpc"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/twitchtv/twirp"
 	"golang.org/x/crypto/bcrypt"

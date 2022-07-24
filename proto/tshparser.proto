@@ -58,7 +58,7 @@ message RemovePlayerAliasRequest { string alias = 1; }
 message RemovePlayerAliasResponse {}
 
 message ListPlayerAliasesRequest {}
-message PlayerAliasesResponse { map<string, string> aliases = 1; }
+message PlayerAliasesResponse { repeated PlayerAlias aliases = 1; }
 
 service TournamentRankerService {
   rpc AddTournament(AddTournamentRequest) returns (AddTournamentResponse);
