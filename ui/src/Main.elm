@@ -4,7 +4,8 @@ import Aliases
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (class, href)
+import Html.Attributes exposing (attribute, class, href, id, src)
+import Html.Events exposing (onClick)
 import Http exposing (stringBody)
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Decode.Pipeline exposing (required)
@@ -37,6 +38,7 @@ type alias Model =
     , page : Page
     , navKey : Nav.Key
     , myuser : DetailedWebData User
+    , burgerActive : Bool
     }
 
 
@@ -62,6 +64,7 @@ type Msg
     | LoginPageMsg Login.Msg
     | AliasesPageMsg Aliases.Msg
     | WhoAmIReceived (DetailedWebData User)
+    | ToggleBurger
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -72,6 +75,7 @@ init flags url navKey =
             , page = NotFoundPage
             , navKey = navKey
             , myuser = RemoteData.Loading
+            , burgerActive = False
             }
     in
     initCurrentPage ( model, fetchWhoAmI )
@@ -144,7 +148,7 @@ view model =
     { title = "MGI Manager"
     , body =
         [ div [ class "container" ]
-            [ loggedInBar model
+            [ navbar model
             , currentView model
             ]
         ]
@@ -177,11 +181,66 @@ userOrLogin user =
             a [ href "/login" ] [ text "Log in" ]
 
 
-loggedInBar : Model -> Html Msg
-loggedInBar model =
+navbar : Model -> Html Msg
+navbar model =
     nav [ class "navbar" ]
         [ div [ class "navbar-brand" ]
-            [ text "MGI Management Portal" ]
+            [ a [ class "navbar-item", href "/" ]
+                [ img
+                    [ src "https://woogles-prod-assets.s3.amazonaws.com/mgi.png"
+                    ]
+                    []
+                ]
+            , a
+                [ attribute "role" "button"
+                , class
+                    ("navbar-burger"
+                        ++ (if model.burgerActive then
+                                " is-active"
+
+                            else
+                                ""
+                           )
+                    )
+                , onClick ToggleBurger
+                ]
+                [ span
+                    [ attribute "aria-hidden" "true"
+                    ]
+                    []
+                , span
+                    [ attribute "aria-hidden" "true"
+                    ]
+                    []
+                , span
+                    [ attribute "aria-hidden" "true"
+                    ]
+                    []
+                ]
+            ]
+        , div
+            [ class
+                ("navbar-menu"
+                    ++ (if model.burgerActive then
+                            " is-active"
+
+                        else
+                            ""
+                       )
+                )
+            ]
+            [ div [ class "navbar-start" ]
+                [ a
+                    [ class "navbar-item", href "/" ]
+                    [ text "Home" ]
+                , a [ class "navbar-item", href "/standings" ]
+                    [ text "Standings" ]
+                , a [ class "navbar-item", href "/tournaments/new" ]
+                    [ text "Add New Tournament" ]
+                , a [ class "navbar-item", href "/aliases" ]
+                    [ text "Manage Aliases" ]
+                ]
+            ]
         , div [ class "navbar-end" ]
             [ div [ class "navbar-item" ]
                 [ userOrLogin model.myuser ]
@@ -295,6 +354,9 @@ update msg model =
 
         ( WhoAmIReceived response, _ ) ->
             ( { model | myuser = response }, Cmd.none )
+
+        ( ToggleBurger, _ ) ->
+            ( { model | burgerActive = not model.burgerActive }, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )

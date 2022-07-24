@@ -6795,6 +6795,7 @@ var $author$project$Route$parseUrl = function (url) {
 var $author$project$Main$init = F3(
 	function (flags, url, navKey) {
 		var model = {
+			burgerActive: false,
 			myuser: $krisajenkins$remotedata$RemoteData$Loading,
 			navKey: navKey,
 			page: $author$project$Main$NotFoundPage,
@@ -6806,6 +6807,7 @@ var $author$project$Main$init = F3(
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$browser$Browser$Navigation$load = _Browser_load;
+var $elm$core$Basics$not = _Basics_not;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$url$Url$addPort = F2(
 	function (maybePort, starter) {
@@ -7303,7 +7305,7 @@ var $author$project$Standings$update = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.page);
-		_v0$8:
+		_v0$9:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ListPageMsg':
@@ -7321,7 +7323,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, updatedCmd));
 					} else {
-						break _v0$8;
+						break _v0$9;
 					}
 				case 'StandingsPageMsg':
 					if (_v0.b.$ === 'StandingsPage') {
@@ -7338,7 +7340,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$StandingsPageMsg, updatedCmd));
 					} else {
-						break _v0$8;
+						break _v0$9;
 					}
 				case 'NewTournamentPageMsg':
 					if (_v0.b.$ === 'NewTournamentPage') {
@@ -7355,7 +7357,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, updatedCmd));
 					} else {
-						break _v0$8;
+						break _v0$9;
 					}
 				case 'LoginPageMsg':
 					if (_v0.b.$ === 'LoginPage') {
@@ -7372,7 +7374,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, updatedCmd));
 					} else {
-						break _v0$8;
+						break _v0$9;
 					}
 				case 'AliasesPageMsg':
 					if (_v0.b.$ === 'AliasesPage') {
@@ -7389,7 +7391,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$AliasesPageMsg, updatedCmd));
 					} else {
-						break _v0$8;
+						break _v0$9;
 					}
 				case 'LinkClicked':
 					var urlRequest = _v0.a.a;
@@ -7416,12 +7418,19 @@ var $author$project$Main$update = F2(
 								model,
 								{route: newRoute}),
 							$elm$core$Platform$Cmd$none));
-				default:
+				case 'WhoAmIReceived':
 					var response = _v0.a.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{myuser: response}),
+						$elm$core$Platform$Cmd$none);
+				default:
+					var _v7 = _v0.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{burgerActive: !model.burgerActive}),
 						$elm$core$Platform$Cmd$none);
 			}
 		}
@@ -7453,16 +7462,9 @@ var $author$project$Aliases$view = function (model) {
 var $author$project$ListTournaments$FetchTournaments = function (a) {
 	return {$: 'FetchTournaments', a: a};
 };
-var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$br = _VirtualDom_node('br');
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$html$Html$Attributes$href = function (url) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'href',
-		_VirtualDom_noJavaScriptUri(url));
-};
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -7675,30 +7677,6 @@ var $author$project$ListTournaments$view = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$text('Refresh tournaments')
-					])),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
-				A2(
-				$elm$html$Html$a,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$href('/tournaments/new')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('Add a new tournament')
-					])),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
-				A2(
-				$elm$html$Html$a,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$href('/standings')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('View standings to date')
 					])),
 				A2($elm$html$Html$br, _List_Nil, _List_Nil),
 				A2($elm$html$Html$br, _List_Nil, _List_Nil),
@@ -8004,7 +7982,10 @@ var $author$project$NewTournament$view = function (model) {
 			[
 				A2(
 				$elm$html$Html$h3,
-				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('subtitle is-2')
+					]),
 				_List_fromArray(
 					[
 						$elm$html$Html$text('Add new tournament')
@@ -8397,7 +8378,30 @@ var $author$project$Main$currentView = function (model) {
 				$author$project$Aliases$view(pageModel));
 	}
 };
+var $author$project$Main$ToggleBurger = {$: 'ToggleBurger'};
+var $elm$html$Html$a = _VirtualDom_node('a');
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
+var $elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var $elm$html$Html$img = _VirtualDom_node('img');
 var $elm$html$Html$nav = _VirtualDom_node('nav');
+var $elm$html$Html$Attributes$src = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'src',
+		_VirtualDom_noJavaScriptOrHtmlUri(url));
+};
 var $author$project$Main$userOrLogin = function (user) {
 	switch (user.$) {
 		case 'NotAsked':
@@ -8426,7 +8430,7 @@ var $author$project$Main$userOrLogin = function (user) {
 					]));
 	}
 };
-var $author$project$Main$loggedInBar = function (model) {
+var $author$project$Main$navbar = function (model) {
 	return A2(
 		$elm$html$Html$nav,
 		_List_fromArray(
@@ -8443,7 +8447,119 @@ var $author$project$Main$loggedInBar = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('MGI Management Portal')
+						A2(
+						$elm$html$Html$a,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('navbar-item'),
+								$elm$html$Html$Attributes$href('/')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$img,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$src('https://woogles-prod-assets.s3.amazonaws.com/mgi.png')
+									]),
+								_List_Nil)
+							])),
+						A2(
+						$elm$html$Html$a,
+						_List_fromArray(
+							[
+								A2($elm$html$Html$Attributes$attribute, 'role', 'button'),
+								$elm$html$Html$Attributes$class(
+								'navbar-burger' + (model.burgerActive ? ' is-active' : '')),
+								$elm$html$Html$Events$onClick($author$project$Main$ToggleBurger)
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$span,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$attribute, 'aria-hidden', 'true')
+									]),
+								_List_Nil),
+								A2(
+								$elm$html$Html$span,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$attribute, 'aria-hidden', 'true')
+									]),
+								_List_Nil),
+								A2(
+								$elm$html$Html$span,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$attribute, 'aria-hidden', 'true')
+									]),
+								_List_Nil)
+							]))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class(
+						'navbar-menu' + (model.burgerActive ? ' is-active' : ''))
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('navbar-start')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$a,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('navbar-item'),
+										$elm$html$Html$Attributes$href('/')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Home')
+									])),
+								A2(
+								$elm$html$Html$a,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('navbar-item'),
+										$elm$html$Html$Attributes$href('/standings')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Standings')
+									])),
+								A2(
+								$elm$html$Html$a,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('navbar-item'),
+										$elm$html$Html$Attributes$href('/tournaments/new')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Add New Tournament')
+									])),
+								A2(
+								$elm$html$Html$a,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('navbar-item'),
+										$elm$html$Html$Attributes$href('/aliases')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Manage Aliases')
+									]))
+							]))
 					])),
 				A2(
 				$elm$html$Html$div,
@@ -8478,7 +8594,7 @@ var $author$project$Main$view = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$loggedInBar(model),
+						$author$project$Main$navbar(model),
 						$author$project$Main$currentView(model)
 					]))
 			]),

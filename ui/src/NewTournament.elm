@@ -65,7 +65,7 @@ initialModel navKey =
 view : Model -> Html Msg
 view model =
     div []
-        [ h3 [] [ text "Add new tournament" ]
+        [ h3 [ class "subtitle is-2" ] [ text "Add new tournament" ]
         , newTournamentForm
         , viewError model.createError
         ]

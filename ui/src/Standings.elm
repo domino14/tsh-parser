@@ -7,10 +7,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
-import Http.Detailed
 import Json.Encode as Encode
-import Platform.Cmd exposing (none)
-import RemoteData exposing (WebData)
+import RemoteData
 import SingleStanding exposing (Standing, standingsResponseDecoder)
 import WebUtils exposing (buildExpect, buildTextExpect, twirpReq)
 

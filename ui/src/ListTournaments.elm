@@ -98,14 +98,6 @@ view model =
             [ text "Refresh tournaments" ]
         , br [] []
         , br [] []
-        , a [ href "/tournaments/new" ]
-            [ text "Add a new tournament" ]
-        , br [] []
-        , br [] []
-        , a [ href "/standings" ]
-            [ text "View standings to date" ]
-        , br [] []
-        , br [] []
         , viewTournaments model.tournaments
         , viewDeleteError model.deleteError
         ]
