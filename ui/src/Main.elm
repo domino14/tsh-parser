@@ -191,7 +191,7 @@ navbar model =
                     ]
                     []
                 ]
-            , a
+            , button
                 [ attribute "role" "button"
                 , class
                     ("navbar-burger"

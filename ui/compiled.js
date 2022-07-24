@@ -8465,7 +8465,7 @@ var $author$project$Main$navbar = function (model) {
 								_List_Nil)
 							])),
 						A2(
-						$elm$html$Html$a,
+						$elm$html$Html$button,
 						_List_fromArray(
 							[
 								A2($elm$html$Html$Attributes$attribute, 'role', 'button'),
