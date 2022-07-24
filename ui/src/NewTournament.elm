@@ -10,8 +10,9 @@ import Http
 import Json.Decode as Decode exposing (Decoder, field, map, string)
 import Json.Encode as Encode
 import ListTournaments exposing (Msg)
+import RemoteData exposing (RemoteData)
 import Route exposing (Route)
-import Session exposing (Session, twirpReq)
+import WebUtils exposing (buildExpect, twirpReq)
 
 
 type alias TournamentRequest =
@@ -45,7 +46,7 @@ type Msg
     | StoreTshURL String
     | StoreCategory String
     | Submit
-    | TournamentCreated (Result Http.Error TournamentCreationResponse)
+    | TournamentCreated (WebUtils.DetailedWebData TournamentCreationResponse)
 
 
 init : Nav.Key -> ( Model, Cmd Msg )
@@ -109,8 +110,8 @@ newTournamentForm =
         ]
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update sess msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         StoreCategory category ->
             let
@@ -153,26 +154,30 @@ update sess msg model =
             ( { model | tournamentRequest = updateUrl }, Cmd.none )
 
         Submit ->
-            ( model, createTournament sess model.tournamentRequest )
+            ( model, createTournament model.tournamentRequest )
 
-        TournamentCreated (Ok _) ->
-            ( { model | createError = Nothing }
-            , Route.pushUrl Route.Tournaments model.navKey
-            )
+        TournamentCreated resp ->
+            case resp of
+                RemoteData.Success _ ->
+                    ( { model | createError = Nothing }
+                    , Route.pushUrl Route.Tournaments model.navKey
+                    )
 
-        TournamentCreated (Err error) ->
-            ( { model | createError = Just (buildErrorMessage error) }
-            , Cmd.none
-            )
+                RemoteData.Failure detailedError ->
+                    ( { model | createError = Just (buildErrorMessage detailedError) }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
-createTournament : Session -> TournamentRequest -> Cmd Msg
-createTournament sess req =
+createTournament : TournamentRequest -> Cmd Msg
+createTournament req =
     twirpReq
-        sess
         "TournamentRankerService"
         "AddTournament"
-        (Http.expectJson TournamentCreated creationDecoder)
+        (buildExpect creationDecoder TournamentCreated)
         (Http.jsonBody (reqEncoder req))
 
 

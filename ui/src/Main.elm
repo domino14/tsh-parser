@@ -4,16 +4,19 @@ import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (class, href)
-import Json.Decode as Decode
+import Http exposing (stringBody)
+import Json.Decode as Decode exposing (Decoder, field, string)
+import Json.Decode.Pipeline exposing (required)
 import Jwt
 import ListTournaments
 import Login
 import NewTournament
+import RemoteData exposing (RemoteData)
 import Route exposing (Route(..))
-import Session exposing (Session)
 import SingleStanding exposing (Standing)
 import Standings
 import Url exposing (Url)
+import WebUtils exposing (DetailedWebData, buildExpect, twirpReq)
 
 
 main : Program () Model Msg
@@ -32,8 +35,12 @@ type alias Model =
     { route : Route
     , page : Page
     , navKey : Nav.Key
-    , session : Session
+    , myuser : DetailedWebData User
     }
+
+
+type alias User =
+    { email : String }
 
 
 type Page
@@ -51,6 +58,7 @@ type Msg
     | NewTournamentPageMsg NewTournament.Msg
     | StandingsPageMsg Standings.Msg
     | LoginPageMsg Login.Msg
+    | WhoAmIReceived (DetailedWebData User)
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -60,10 +68,24 @@ init flags url navKey =
             { route = Route.parseUrl url
             , page = NotFoundPage
             , navKey = navKey
-            , session = Session ""
+            , myuser = RemoteData.Loading
             }
     in
-    initCurrentPage ( model, Cmd.none )
+    initCurrentPage ( model, fetchWhoAmI )
+
+
+whoAmIResponseDecoder : Decoder User
+whoAmIResponseDecoder =
+    Decode.succeed User
+        |> required "email" string
+
+
+fetchWhoAmI : Cmd Msg
+fetchWhoAmI =
+    twirpReq "AuthenticationService"
+        "WhoAmI"
+        (buildExpect whoAmIResponseDecoder WhoAmIReceived)
+        (stringBody "application/json" "{}")
 
 
 initCurrentPage : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
@@ -133,18 +155,20 @@ emailFromJwt jwt =
     Jwt.decodeToken jwtDecoder jwt
 
 
-userOrLogin : Model -> Html Msg
-userOrLogin model =
-    let
-        email =
-            emailFromJwt model.session.jwt
-    in
-    case email of
-        Err _ ->
-            a [ href "/login" ] [ text "Log in" ]
+userOrLogin : DetailedWebData User -> Html Msg
+userOrLogin user =
+    case user of
+        RemoteData.NotAsked ->
+            text ""
 
-        Ok actualEmail ->
-            span [] [ text ("Logged in as " ++ actualEmail) ]
+        RemoteData.Loading ->
+            text "Loading..."
+
+        RemoteData.Success actualuser ->
+            span [] [ text ("Logged in as " ++ actualuser.email) ]
+
+        RemoteData.Failure _ ->
+            a [ href "/login" ] [ text "Log in" ]
 
 
 loggedInBar : Model -> Html Msg
@@ -154,7 +178,7 @@ loggedInBar model =
             [ text "MGI Management Portal" ]
         , div [ class "navbar-end" ]
             [ div [ class "navbar-item" ]
-                [ userOrLogin model ]
+                [ userOrLogin model.myuser ]
             ]
         ]
 
@@ -193,7 +217,7 @@ update msg model =
         ( ListPageMsg subMsg, TournamentListPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    ListTournaments.update model.session subMsg pageModel
+                    ListTournaments.update subMsg pageModel
             in
             ( { model | page = TournamentListPage updatedPageModel }
             , Cmd.map ListPageMsg updatedCmd
@@ -202,7 +226,7 @@ update msg model =
         ( StandingsPageMsg subMsg, StandingsPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    Standings.update model.session subMsg pageModel
+                    Standings.update subMsg pageModel
             in
             ( { model | page = StandingsPage updatedPageModel }
             , Cmd.map StandingsPageMsg updatedCmd
@@ -211,7 +235,7 @@ update msg model =
         ( NewTournamentPageMsg subMsg, NewTournamentPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
-                    NewTournament.update model.session subMsg pageModel
+                    NewTournament.update subMsg pageModel
             in
             ( { model | page = NewTournamentPage updatedPageModel }
             , Cmd.map NewTournamentPageMsg updatedCmd
@@ -224,7 +248,6 @@ update msg model =
             in
             ( { model
                 | page = LoginPage updatedPageModel
-                , session = Session updatedPageModel.token -- is there something better than passing it this way?
               }
             , Cmd.map LoginPageMsg updatedCmd
             )
@@ -248,6 +271,9 @@ update msg model =
             in
             ( { model | route = newRoute }, Cmd.none )
                 |> initCurrentPage
+
+        ( WhoAmIReceived response, _ ) ->
+            ( { model | myuser = response }, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )

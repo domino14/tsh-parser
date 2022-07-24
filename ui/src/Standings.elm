@@ -9,13 +9,14 @@ import Html.Events exposing (onClick)
 import Http
 import Http.Detailed
 import Json.Encode as Encode
+import Platform.Cmd exposing (none)
 import RemoteData exposing (WebData)
-import Session exposing (Session, twirpReq)
 import SingleStanding exposing (Standing, standingsResponseDecoder)
+import WebUtils exposing (buildExpect, buildTextExpect, twirpReq)
 
 
 type alias Model =
-    { standings : WebData (List Standing)
+    { standings : WebUtils.DetailedWebData (List Standing)
     , dateRange : DateRange
     , modalVisible : Bool
     , potentialAlias : String -- the alias of a player we're potentially editing
@@ -26,12 +27,12 @@ type alias Model =
 
 type Msg
     = FetchStandings DateRange
-    | StandingsReceived (WebData (List Standing))
+    | StandingsReceived (WebUtils.DetailedWebData (List Standing))
     | OpenAliasModal String
     | CloseAliasModal
     | StoreRealName String
     | SubmitAlias
-    | AliasCreated (Result (Http.Detailed.Error String) Http.Metadata)
+    | AliasCreated (WebUtils.DetailedWebData String)
 
 
 init : ( Model, Cmd Msg )
@@ -54,17 +55,15 @@ init =
 
 fetchStandings : DateRange -> Cmd Msg
 fetchStandings dateRange =
-    Http.post
-        { url = "http://localhost:8082/twirp/tshparser.TournamentRankerService/ComputeStandings"
-        , expect =
-            standingsResponseDecoder
-                |> Http.expectJson (RemoteData.fromResult >> StandingsReceived)
-        , body = Http.jsonBody (dateRangeEncoder dateRange)
-        }
+    twirpReq
+        "TournamentRankerService"
+        "ComputeStandings"
+        (buildExpect standingsResponseDecoder StandingsReceived)
+        (Http.jsonBody (dateRangeEncoder dateRange))
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update sess msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         FetchStandings dateRange ->
             ( { model | standings = RemoteData.Loading }, fetchStandings dateRange )
@@ -82,13 +81,18 @@ update sess msg model =
             ( { model | potentialRealName = realName }, Cmd.none )
 
         SubmitAlias ->
-            ( model, createAlias sess model.potentialAlias model.potentialRealName )
+            ( model, createAlias model.potentialAlias model.potentialRealName )
 
-        AliasCreated (Ok _) ->
-            ( model, fetchStandings model.dateRange )
+        AliasCreated resp ->
+            case resp of
+                RemoteData.Success _ ->
+                    ( model, fetchStandings model.dateRange )
 
-        AliasCreated (Err detailedError) ->
-            ( { model | aliasCreationError = Just (buildErrorMessage detailedError) }, Cmd.none )
+                RemoteData.Failure detailedError ->
+                    ( { model | aliasCreationError = Just (buildErrorMessage detailedError) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -103,7 +107,7 @@ view model =
         ]
 
 
-viewStandings : WebData (List Standing) -> Html Msg
+viewStandings : WebUtils.DetailedWebData (List Standing) -> Html Msg
 viewStandings standings =
     case standings of
         RemoteData.NotAsked ->
@@ -255,12 +259,12 @@ aliasReqEncoder req =
         ]
 
 
-createAlias : Session -> String -> String -> Cmd Msg
-createAlias sess alias_ realname =
-    twirpReq sess
+createAlias : String -> String -> Cmd Msg
+createAlias alias_ realname =
+    twirpReq
         "TournamentRankerService"
         "AddPlayerAlias"
-        (Http.Detailed.expectString AliasCreated)
+        (buildTextExpect AliasCreated)
         (Http.jsonBody (aliasReqEncoder (AliasRequest realname alias_)))
 
 

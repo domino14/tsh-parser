@@ -2,18 +2,10 @@ This repository parses [TSH](http://www.poslarchive.com/tsh/doc/all.html) data f
 
 A user interface is included that allows an operator to add/remove tournaments, add/remove player aliases, and view standings over a period of time. This UI is written in [Elm](https://elm-lang.org).
 
-#### Example run script:
+#### How to run:
 
 ```
-DB_MIGRATIONS_PATH=file://../../migrations/ DB_PATH=mgi.db TOURNEY_SCHEMA_PATH=../../cfg/pts_mgi.csv SECRET_KEY=foobar ./tshparser
-```
-
-front-end:
-
-In `ui` directory:
-
-```
-elm-live src/Main.elm --open --pushstate -- --output=compiled.js
+docker-compose up
 ```
 
 # protoc

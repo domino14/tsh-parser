@@ -9,9 +9,8 @@ import Http
 import Http.Detailed
 import Json.Encode as Encode
 import RemoteData exposing (RemoteData, WebData)
-import Session exposing (Session, buildExpect, twirpReq)
 import Tournament exposing (Tournament, tournamentsResponseDecoder)
-import WebUtils exposing (DetailedWebData)
+import WebUtils exposing (DetailedWebData, buildExpect, twirpReq)
 
 
 type alias Model =

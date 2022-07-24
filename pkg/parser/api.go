@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var URLRegex = regexp.MustCompile(`(https?://.+)html/([\w]+)-standings-\d+.html`)
+var URLRegex = regexp.MustCompile(`(https?://.+)html/([\w]+)-standings(?:-\d+)?.html`)
 
 type Service struct {
 	store      *SqliteStore

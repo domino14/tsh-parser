@@ -4562,222 +4562,7 @@ function _Url_percentDecode(string)
 	{
 		return $elm$core$Maybe$Nothing;
 	}
-}
-
-// BYTES
-
-function _Bytes_width(bytes)
-{
-	return bytes.byteLength;
-}
-
-var _Bytes_getHostEndianness = F2(function(le, be)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		callback(_Scheduler_succeed(new Uint8Array(new Uint32Array([1]))[0] === 1 ? le : be));
-	});
-});
-
-
-// ENCODERS
-
-function _Bytes_encode(encoder)
-{
-	var mutableBytes = new DataView(new ArrayBuffer($elm$bytes$Bytes$Encode$getWidth(encoder)));
-	$elm$bytes$Bytes$Encode$write(encoder)(mutableBytes)(0);
-	return mutableBytes;
-}
-
-
-// SIGNED INTEGERS
-
-var _Bytes_write_i8  = F3(function(mb, i, n) { mb.setInt8(i, n); return i + 1; });
-var _Bytes_write_i16 = F4(function(mb, i, n, isLE) { mb.setInt16(i, n, isLE); return i + 2; });
-var _Bytes_write_i32 = F4(function(mb, i, n, isLE) { mb.setInt32(i, n, isLE); return i + 4; });
-
-
-// UNSIGNED INTEGERS
-
-var _Bytes_write_u8  = F3(function(mb, i, n) { mb.setUint8(i, n); return i + 1 ;});
-var _Bytes_write_u16 = F4(function(mb, i, n, isLE) { mb.setUint16(i, n, isLE); return i + 2; });
-var _Bytes_write_u32 = F4(function(mb, i, n, isLE) { mb.setUint32(i, n, isLE); return i + 4; });
-
-
-// FLOATS
-
-var _Bytes_write_f32 = F4(function(mb, i, n, isLE) { mb.setFloat32(i, n, isLE); return i + 4; });
-var _Bytes_write_f64 = F4(function(mb, i, n, isLE) { mb.setFloat64(i, n, isLE); return i + 8; });
-
-
-// BYTES
-
-var _Bytes_write_bytes = F3(function(mb, offset, bytes)
-{
-	for (var i = 0, len = bytes.byteLength, limit = len - 4; i <= limit; i += 4)
-	{
-		mb.setUint32(offset + i, bytes.getUint32(i));
-	}
-	for (; i < len; i++)
-	{
-		mb.setUint8(offset + i, bytes.getUint8(i));
-	}
-	return offset + len;
-});
-
-
-// STRINGS
-
-function _Bytes_getStringWidth(string)
-{
-	for (var width = 0, i = 0; i < string.length; i++)
-	{
-		var code = string.charCodeAt(i);
-		width +=
-			(code < 0x80) ? 1 :
-			(code < 0x800) ? 2 :
-			(code < 0xD800 || 0xDBFF < code) ? 3 : (i++, 4);
-	}
-	return width;
-}
-
-var _Bytes_write_string = F3(function(mb, offset, string)
-{
-	for (var i = 0; i < string.length; i++)
-	{
-		var code = string.charCodeAt(i);
-		offset +=
-			(code < 0x80)
-				? (mb.setUint8(offset, code)
-				, 1
-				)
-				:
-			(code < 0x800)
-				? (mb.setUint16(offset, 0xC080 /* 0b1100000010000000 */
-					| (code >>> 6 & 0x1F /* 0b00011111 */) << 8
-					| code & 0x3F /* 0b00111111 */)
-				, 2
-				)
-				:
-			(code < 0xD800 || 0xDBFF < code)
-				? (mb.setUint16(offset, 0xE080 /* 0b1110000010000000 */
-					| (code >>> 12 & 0xF /* 0b00001111 */) << 8
-					| code >>> 6 & 0x3F /* 0b00111111 */)
-				, mb.setUint8(offset + 2, 0x80 /* 0b10000000 */
-					| code & 0x3F /* 0b00111111 */)
-				, 3
-				)
-				:
-			(code = (code - 0xD800) * 0x400 + string.charCodeAt(++i) - 0xDC00 + 0x10000
-			, mb.setUint32(offset, 0xF0808080 /* 0b11110000100000001000000010000000 */
-				| (code >>> 18 & 0x7 /* 0b00000111 */) << 24
-				| (code >>> 12 & 0x3F /* 0b00111111 */) << 16
-				| (code >>> 6 & 0x3F /* 0b00111111 */) << 8
-				| code & 0x3F /* 0b00111111 */)
-			, 4
-			);
-	}
-	return offset;
-});
-
-
-// DECODER
-
-var _Bytes_decode = F2(function(decoder, bytes)
-{
-	try {
-		return $elm$core$Maybe$Just(A2(decoder, bytes, 0).b);
-	} catch(e) {
-		return $elm$core$Maybe$Nothing;
-	}
-});
-
-var _Bytes_read_i8  = F2(function(      bytes, offset) { return _Utils_Tuple2(offset + 1, bytes.getInt8(offset)); });
-var _Bytes_read_i16 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 2, bytes.getInt16(offset, isLE)); });
-var _Bytes_read_i32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getInt32(offset, isLE)); });
-var _Bytes_read_u8  = F2(function(      bytes, offset) { return _Utils_Tuple2(offset + 1, bytes.getUint8(offset)); });
-var _Bytes_read_u16 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 2, bytes.getUint16(offset, isLE)); });
-var _Bytes_read_u32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getUint32(offset, isLE)); });
-var _Bytes_read_f32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getFloat32(offset, isLE)); });
-var _Bytes_read_f64 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 8, bytes.getFloat64(offset, isLE)); });
-
-var _Bytes_read_bytes = F3(function(len, bytes, offset)
-{
-	return _Utils_Tuple2(offset + len, new DataView(bytes.buffer, bytes.byteOffset + offset, len));
-});
-
-var _Bytes_read_string = F3(function(len, bytes, offset)
-{
-	var string = '';
-	var end = offset + len;
-	for (; offset < end;)
-	{
-		var byte = bytes.getUint8(offset++);
-		string +=
-			(byte < 128)
-				? String.fromCharCode(byte)
-				:
-			((byte & 0xE0 /* 0b11100000 */) === 0xC0 /* 0b11000000 */)
-				? String.fromCharCode((byte & 0x1F /* 0b00011111 */) << 6 | bytes.getUint8(offset++) & 0x3F /* 0b00111111 */)
-				:
-			((byte & 0xF0 /* 0b11110000 */) === 0xE0 /* 0b11100000 */)
-				? String.fromCharCode(
-					(byte & 0xF /* 0b00001111 */) << 12
-					| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 6
-					| bytes.getUint8(offset++) & 0x3F /* 0b00111111 */
-				)
-				:
-				(byte =
-					((byte & 0x7 /* 0b00000111 */) << 18
-						| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 12
-						| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 6
-						| bytes.getUint8(offset++) & 0x3F /* 0b00111111 */
-					) - 0x10000
-				, String.fromCharCode(Math.floor(byte / 0x400) + 0xD800, byte % 0x400 + 0xDC00)
-				);
-	}
-	return _Utils_Tuple2(offset, string);
-});
-
-var _Bytes_decodeFailure = F2(function() { throw 0; });
-
-
-
-var _Bitwise_and = F2(function(a, b)
-{
-	return a & b;
-});
-
-var _Bitwise_or = F2(function(a, b)
-{
-	return a | b;
-});
-
-var _Bitwise_xor = F2(function(a, b)
-{
-	return a ^ b;
-});
-
-function _Bitwise_complement(a)
-{
-	return ~a;
-};
-
-var _Bitwise_shiftLeftBy = F2(function(offset, a)
-{
-	return a << offset;
-});
-
-var _Bitwise_shiftRightBy = F2(function(offset, a)
-{
-	return a >> offset;
-});
-
-var _Bitwise_shiftRightZfBy = F2(function(offset, a)
-{
-	return a >>> offset;
-});
-var $author$project$Main$LinkClicked = function (a) {
+}var $author$project$Main$LinkClicked = function (a) {
 	return {$: 'LinkClicked', a: a};
 };
 var $author$project$Main$UrlChanged = function (a) {
@@ -5572,71 +5357,11 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$application = _Browser_application;
-var $author$project$Main$NotFoundPage = {$: 'NotFoundPage'};
-var $author$project$Session$Session = function (jwt) {
-	return {jwt: jwt};
-};
-var $author$project$Main$ListPageMsg = function (a) {
-	return {$: 'ListPageMsg', a: a};
-};
-var $author$project$Main$LoginPage = function (a) {
-	return {$: 'LoginPage', a: a};
-};
-var $author$project$Main$LoginPageMsg = function (a) {
-	return {$: 'LoginPageMsg', a: a};
-};
-var $author$project$Main$NewTournamentPage = function (a) {
-	return {$: 'NewTournamentPage', a: a};
-};
-var $author$project$Main$NewTournamentPageMsg = function (a) {
-	return {$: 'NewTournamentPageMsg', a: a};
-};
-var $author$project$Main$StandingsPage = function (a) {
-	return {$: 'StandingsPage', a: a};
-};
-var $author$project$Main$StandingsPageMsg = function (a) {
-	return {$: 'StandingsPageMsg', a: a};
-};
-var $author$project$Main$TournamentListPage = function (a) {
-	return {$: 'TournamentListPage', a: a};
-};
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $krisajenkins$remotedata$RemoteData$Loading = {$: 'Loading'};
-var $author$project$ListTournaments$TournamentsReceived = function (a) {
-	return {$: 'TournamentsReceived', a: a};
+var $author$project$Main$NotFoundPage = {$: 'NotFoundPage'};
+var $author$project$Main$WhoAmIReceived = function (a) {
+	return {$: 'WhoAmIReceived', a: a};
 };
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$DateRange$dateRangeEncoder = function (req) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'begin_date',
-				$elm$json$Json$Encode$string(req.beginDate)),
-				_Utils_Tuple2(
-				'end_date',
-				$elm$json$Json$Encode$string(req.endDate))
-			]));
-};
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -6179,6 +5904,11 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
 var $elm$http$Http$expectStringResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -6187,6 +5917,7 @@ var $elm$http$Http$expectStringResponse = F2(
 			$elm$core$Basics$identity,
 			A2($elm$core$Basics$composeR, toResult, toMsg));
 	});
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$core$Result$mapError = F2(
 	function (f, result) {
 		if (result.$ === 'Ok') {
@@ -6198,52 +5929,73 @@ var $elm$core$Result$mapError = F2(
 				f(e));
 		}
 	});
-var $elm$http$Http$BadBody = function (a) {
-	return {$: 'BadBody', a: a};
-};
-var $elm$http$Http$BadStatus = function (a) {
-	return {$: 'BadStatus', a: a};
-};
-var $elm$http$Http$BadUrl = function (a) {
+var $jzxhuang$http_extras$Http$Detailed$BadBody = F3(
+	function (a, b, c) {
+		return {$: 'BadBody', a: a, b: b, c: c};
+	});
+var $jzxhuang$http_extras$Http$Detailed$BadStatus = F2(
+	function (a, b) {
+		return {$: 'BadStatus', a: a, b: b};
+	});
+var $jzxhuang$http_extras$Http$Detailed$BadUrl = function (a) {
 	return {$: 'BadUrl', a: a};
 };
-var $elm$http$Http$NetworkError = {$: 'NetworkError'};
-var $elm$http$Http$Timeout = {$: 'Timeout'};
-var $elm$http$Http$resolve = F2(
+var $jzxhuang$http_extras$Http$Detailed$NetworkError = {$: 'NetworkError'};
+var $jzxhuang$http_extras$Http$Detailed$Timeout = {$: 'Timeout'};
+var $jzxhuang$http_extras$Http$Detailed$resolve = F2(
 	function (toResult, response) {
 		switch (response.$) {
 			case 'BadUrl_':
 				var url = response.a;
 				return $elm$core$Result$Err(
-					$elm$http$Http$BadUrl(url));
+					$jzxhuang$http_extras$Http$Detailed$BadUrl(url));
 			case 'Timeout_':
-				return $elm$core$Result$Err($elm$http$Http$Timeout);
+				return $elm$core$Result$Err($jzxhuang$http_extras$Http$Detailed$Timeout);
 			case 'NetworkError_':
-				return $elm$core$Result$Err($elm$http$Http$NetworkError);
+				return $elm$core$Result$Err($jzxhuang$http_extras$Http$Detailed$NetworkError);
 			case 'BadStatus_':
 				var metadata = response.a;
+				var body = response.b;
 				return $elm$core$Result$Err(
-					$elm$http$Http$BadStatus(metadata.statusCode));
+					A2($jzxhuang$http_extras$Http$Detailed$BadStatus, metadata, body));
 			default:
+				var metadata = response.a;
 				var body = response.b;
 				return A2(
 					$elm$core$Result$mapError,
-					$elm$http$Http$BadBody,
-					toResult(body));
+					A2($jzxhuang$http_extras$Http$Detailed$BadBody, metadata, body),
+					toResult(
+						_Utils_Tuple2(metadata, body)));
 		}
 	});
-var $elm$http$Http$expectJson = F2(
+var $jzxhuang$http_extras$Http$Detailed$responseToJson = F2(
+	function (decoder, responseString) {
+		return A2(
+			$jzxhuang$http_extras$Http$Detailed$resolve,
+			function (_v0) {
+				var metadata = _v0.a;
+				var body = _v0.b;
+				return A2(
+					$elm$core$Result$mapError,
+					$elm$json$Json$Decode$errorToString,
+					A2(
+						$elm$json$Json$Decode$decodeString,
+						A2(
+							$elm$json$Json$Decode$map,
+							function (res) {
+								return _Utils_Tuple2(metadata, res);
+							},
+							decoder),
+						body));
+			},
+			responseString);
+	});
+var $jzxhuang$http_extras$Http$Detailed$expectJson = F2(
 	function (toMsg, decoder) {
 		return A2(
 			$elm$http$Http$expectStringResponse,
 			toMsg,
-			$elm$http$Http$resolve(
-				function (string) {
-					return A2(
-						$elm$core$Result$mapError,
-						$elm$json$Json$Decode$errorToString,
-						A2($elm$json$Json$Decode$decodeString, decoder, string));
-				}));
+			$jzxhuang$http_extras$Http$Detailed$responseToJson(decoder));
 	});
 var $krisajenkins$remotedata$RemoteData$Failure = function (a) {
 	return {$: 'Failure', a: a};
@@ -6260,12 +6012,27 @@ var $krisajenkins$remotedata$RemoteData$fromResult = function (result) {
 		return $krisajenkins$remotedata$RemoteData$Success(x);
 	}
 };
-var $elm$http$Http$jsonBody = function (value) {
-	return A2(
-		_Http_pair,
-		'application/json',
-		A2($elm$json$Json$Encode$encode, 0, value));
-};
+var $author$project$WebUtils$buildExpect = F2(
+	function (decoder, msg) {
+		return A2(
+			$jzxhuang$http_extras$Http$Detailed$expectJson,
+			function (result) {
+				return msg(
+					$krisajenkins$remotedata$RemoteData$fromResult(
+						function () {
+							if (result.$ === 'Err') {
+								var err = result.a;
+								return $elm$core$Result$Err(err);
+							} else {
+								var _v1 = result.a;
+								var a = _v1.b;
+								return $elm$core$Result$Ok(a);
+							}
+						}()));
+			},
+			decoder);
+	});
+var $elm$http$Http$stringBody = _Http_pair;
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
 };
@@ -6438,13 +6205,16 @@ var $elm$http$Http$post = function (r) {
 	return $elm$http$Http$request(
 		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
-var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$json$Json$Decode$list = _Json_decodeList;
-var $author$project$Tournament$Tournament = F4(
-	function (id, name, category, date) {
-		return {category: category, date: date, id: id, name: name};
+var $author$project$WebUtils$twirpReq = F4(
+	function (service, method, expect, body) {
+		return $elm$http$Http$post(
+			{body: body, expect: expect, url: '/twirp/tshparser.' + (service + ('/' + method))});
 	});
+var $author$project$Main$User = function (email) {
+	return {email: email};
+};
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $elm$json$Json$Decode$field = _Json_decodeField;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
 		return A2(
@@ -6453,6 +6223,82 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 			decoder);
 	});
 var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Main$whoAmIResponseDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'email',
+	$elm$json$Json$Decode$string,
+	$elm$json$Json$Decode$succeed($author$project$Main$User));
+var $author$project$Main$fetchWhoAmI = A4(
+	$author$project$WebUtils$twirpReq,
+	'AuthenticationService',
+	'WhoAmI',
+	A2($author$project$WebUtils$buildExpect, $author$project$Main$whoAmIResponseDecoder, $author$project$Main$WhoAmIReceived),
+	A2($elm$http$Http$stringBody, 'application/json', '{}'));
+var $author$project$Main$ListPageMsg = function (a) {
+	return {$: 'ListPageMsg', a: a};
+};
+var $author$project$Main$LoginPage = function (a) {
+	return {$: 'LoginPage', a: a};
+};
+var $author$project$Main$LoginPageMsg = function (a) {
+	return {$: 'LoginPageMsg', a: a};
+};
+var $author$project$Main$NewTournamentPage = function (a) {
+	return {$: 'NewTournamentPage', a: a};
+};
+var $author$project$Main$NewTournamentPageMsg = function (a) {
+	return {$: 'NewTournamentPageMsg', a: a};
+};
+var $author$project$Main$StandingsPage = function (a) {
+	return {$: 'StandingsPage', a: a};
+};
+var $author$project$Main$StandingsPageMsg = function (a) {
+	return {$: 'StandingsPageMsg', a: a};
+};
+var $author$project$Main$TournamentListPage = function (a) {
+	return {$: 'TournamentListPage', a: a};
+};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $author$project$ListTournaments$TournamentsReceived = function (a) {
+	return {$: 'TournamentsReceived', a: a};
+};
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$DateRange$dateRangeEncoder = function (req) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'begin_date',
+				$elm$json$Json$Encode$string(req.beginDate)),
+				_Utils_Tuple2(
+				'end_date',
+				$elm$json$Json$Encode$string(req.endDate))
+			]));
+};
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Tournament$Tournament = F4(
+	function (id, name, category, date) {
+		return {category: category, date: date, id: id, name: name};
+	});
 var $author$project$Tournament$tournamentDecoder = A3(
 	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 	'date',
@@ -6475,16 +6321,13 @@ var $author$project$Tournament$tournamentsResponseDecoder = A2(
 	'tournaments',
 	$elm$json$Json$Decode$list($author$project$Tournament$tournamentDecoder));
 var $author$project$ListTournaments$fetchTournaments = function (dateRange) {
-	return $elm$http$Http$post(
-		{
-			body: $elm$http$Http$jsonBody(
-				$author$project$DateRange$dateRangeEncoder(dateRange)),
-			expect: A2(
-				$elm$http$Http$expectJson,
-				A2($elm$core$Basics$composeR, $krisajenkins$remotedata$RemoteData$fromResult, $author$project$ListTournaments$TournamentsReceived),
-				$author$project$Tournament$tournamentsResponseDecoder),
-			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/GetTournaments'
-		});
+	return A4(
+		$author$project$WebUtils$twirpReq,
+		'TournamentRankerService',
+		'GetTournaments',
+		A2($author$project$WebUtils$buildExpect, $author$project$Tournament$tournamentsResponseDecoder, $author$project$ListTournaments$TournamentsReceived),
+		$elm$http$Http$jsonBody(
+			$author$project$DateRange$dateRangeEncoder(dateRange)));
 };
 var $author$project$ListTournaments$init = function () {
 	var model = {
@@ -6504,8 +6347,7 @@ var $author$project$Login$initialModel = function (navKey) {
 	return {
 		loginError: $elm$core$Maybe$Nothing,
 		loginRequest: A2($author$project$Login$LoginRequest, '', ''),
-		navKey: navKey,
-		token: ''
+		navKey: navKey
 	};
 };
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
@@ -6573,16 +6415,13 @@ var $author$project$SingleStanding$standingsResponseDecoder = A2(
 	'standings',
 	$elm$json$Json$Decode$list($author$project$SingleStanding$standingDecoder));
 var $author$project$Standings$fetchStandings = function (dateRange) {
-	return $elm$http$Http$post(
-		{
-			body: $elm$http$Http$jsonBody(
-				$author$project$DateRange$dateRangeEncoder(dateRange)),
-			expect: A2(
-				$elm$http$Http$expectJson,
-				A2($elm$core$Basics$composeR, $krisajenkins$remotedata$RemoteData$fromResult, $author$project$Standings$StandingsReceived),
-				$author$project$SingleStanding$standingsResponseDecoder),
-			url: 'http://localhost:8082/twirp/tshparser.TournamentRankerService/ComputeStandings'
-		});
+	return A4(
+		$author$project$WebUtils$twirpReq,
+		'TournamentRankerService',
+		'ComputeStandings',
+		A2($author$project$WebUtils$buildExpect, $author$project$SingleStanding$standingsResponseDecoder, $author$project$Standings$StandingsReceived),
+		$elm$http$Http$jsonBody(
+			$author$project$DateRange$dateRangeEncoder(dateRange)));
 };
 var $author$project$Standings$init = function () {
 	var model = {
@@ -6912,13 +6751,13 @@ var $author$project$Route$parseUrl = function (url) {
 var $author$project$Main$init = F3(
 	function (flags, url, navKey) {
 		var model = {
+			myuser: $krisajenkins$remotedata$RemoteData$Loading,
 			navKey: navKey,
 			page: $author$project$Main$NotFoundPage,
-			route: $author$project$Route$parseUrl(url),
-			session: $author$project$Session$Session('')
+			route: $author$project$Route$parseUrl(url)
 		};
 		return $author$project$Main$initCurrentPage(
-			_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			_Utils_Tuple2(model, $author$project$Main$fetchWhoAmI));
 	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
@@ -6968,31 +6807,26 @@ var $elm$url$Url$toString = function (url) {
 					_Utils_ap(http, url.host)),
 				url.path)));
 };
+var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Errors$buildErrorMessage = function (httpError) {
-	switch (httpError.$) {
-		case 'BadUrl':
-			var message = httpError.a;
-			return message;
-		case 'Timeout':
-			return 'Server is taking too long to respond. Please try again later.';
-		case 'NetworkError':
-			return 'Unable to reach server.';
-		case 'BadStatus':
-			var statusCode = httpError.a;
-			return 'Request failed with status code: ' + $elm$core$String$fromInt(statusCode);
-		default:
-			var message = httpError.a;
-			return message;
-	}
+	return $elm$core$Debug$toString(httpError);
 };
 var $author$project$ListTournaments$TournamentDeleted = function (a) {
 	return {$: 'TournamentDeleted', a: a};
 };
-var $elm$http$Http$expectString = function (toMsg) {
+var $jzxhuang$http_extras$Http$Detailed$responseToString = function (responseString) {
 	return A2(
-		$elm$http$Http$expectStringResponse,
-		toMsg,
-		$elm$http$Http$resolve($elm$core$Result$Ok));
+		$jzxhuang$http_extras$Http$Detailed$resolve,
+		function (_v0) {
+			var metadata = _v0.a;
+			var body = _v0.b;
+			return $elm$core$Result$Ok(
+				_Utils_Tuple2(metadata, body));
+		},
+		responseString);
+};
+var $jzxhuang$http_extras$Http$Detailed$expectString = function (toMsg) {
+	return A2($elm$http$Http$expectStringResponse, toMsg, $jzxhuang$http_extras$Http$Detailed$responseToString);
 };
 var $author$project$ListTournaments$tourneyIDEncoder = function (tid) {
 	return $elm$json$Json$Encode$object(
@@ -7003,40 +6837,17 @@ var $author$project$ListTournaments$tourneyIDEncoder = function (tid) {
 				$elm$json$Json$Encode$string(tid))
 			]));
 };
-var $elm$http$Http$Header = F2(
-	function (a, b) {
-		return {$: 'Header', a: a, b: b};
-	});
-var $elm$http$Http$header = $elm$http$Http$Header;
-var $author$project$Session$twirpReq = F5(
-	function (sess, service, method, expect, body) {
-		return $elm$http$Http$request(
-			{
-				body: body,
-				expect: expect,
-				headers: _List_fromArray(
-					[
-						A2($elm$http$Http$header, 'Authorization', 'Bearer ' + sess.jwt)
-					]),
-				method: 'POST',
-				timeout: $elm$core$Maybe$Nothing,
-				tracker: $elm$core$Maybe$Nothing,
-				url: 'http://localhost:8082/twirp/tshparser.' + (service + ('/' + method))
-			});
-	});
-var $author$project$ListTournaments$deleteTournament = F2(
-	function (sess, tid) {
-		return A5(
-			$author$project$Session$twirpReq,
-			sess,
-			'TournamentRankerService',
-			'RemoveTournament',
-			$elm$http$Http$expectString($author$project$ListTournaments$TournamentDeleted),
-			$elm$http$Http$jsonBody(
-				$author$project$ListTournaments$tourneyIDEncoder(tid)));
-	});
-var $author$project$ListTournaments$update = F3(
-	function (session, msg, model) {
+var $author$project$ListTournaments$deleteTournament = function (tid) {
+	return A4(
+		$author$project$WebUtils$twirpReq,
+		'TournamentRankerService',
+		'RemoveTournament',
+		$jzxhuang$http_extras$Http$Detailed$expectString($author$project$ListTournaments$TournamentDeleted),
+		$elm$http$Http$jsonBody(
+			$author$project$ListTournaments$tourneyIDEncoder(tid)));
+};
+var $author$project$ListTournaments$update = F2(
+	function (msg, model) {
 		switch (msg.$) {
 			case 'FetchTournaments':
 				var dateRange = msg.a;
@@ -7056,7 +6867,7 @@ var $author$project$ListTournaments$update = F3(
 				var tid = msg.a;
 				return _Utils_Tuple2(
 					model,
-					A2($author$project$ListTournaments$deleteTournament, session, tid));
+					$author$project$ListTournaments$deleteTournament(tid));
 			default:
 				if (msg.a.$ === 'Ok') {
 					return _Utils_Tuple2(
@@ -7123,8 +6934,8 @@ var $author$project$Login$requestJWT = function (req) {
 		{
 			body: $elm$http$Http$jsonBody(
 				$author$project$Login$reqEncoder(req)),
-			expect: A2($elm$http$Http$expectJson, $author$project$Login$LoggedIn, $author$project$Login$loginResponseDecoder),
-			url: 'http://localhost:8082/twirp/tshparser.AuthenticationService/GetJWT'
+			expect: A2($author$project$WebUtils$buildExpect, $author$project$Login$loginResponseDecoder, $author$project$Login$LoggedIn),
+			url: '/twirp/tshparser.AuthenticationService/GetJWT'
 		});
 };
 var $author$project$Login$update = F2(
@@ -7157,23 +6968,26 @@ var $author$project$Login$update = F2(
 					model,
 					$author$project$Login$requestJWT(model.loginRequest));
 			default:
-				if (msg.a.$ === 'Ok') {
-					var loginResponse = msg.a.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{loginError: $elm$core$Maybe$Nothing, token: loginResponse.token}),
-						A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
-				} else {
-					var error = msg.a.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								loginError: $elm$core$Maybe$Just(
-									$author$project$Errors$buildErrorMessage(error))
-							}),
-						$elm$core$Platform$Cmd$none);
+				var loginResponse = msg.a;
+				switch (loginResponse.$) {
+					case 'Success':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{loginError: $elm$core$Maybe$Nothing}),
+							A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
+					case 'Failure':
+						var detailedError = loginResponse.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									loginError: $elm$core$Maybe$Just(
+										$author$project$Errors$buildErrorMessage(detailedError))
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
 	});
@@ -7205,19 +7019,17 @@ var $author$project$NewTournament$reqEncoder = function (req) {
 				$elm$json$Json$Encode$string(req.tshURL))
 			]));
 };
-var $author$project$NewTournament$createTournament = F2(
-	function (sess, req) {
-		return A5(
-			$author$project$Session$twirpReq,
-			sess,
-			'TournamentRankerService',
-			'AddTournament',
-			A2($elm$http$Http$expectJson, $author$project$NewTournament$TournamentCreated, $author$project$NewTournament$creationDecoder),
-			$elm$http$Http$jsonBody(
-				$author$project$NewTournament$reqEncoder(req)));
-	});
-var $author$project$NewTournament$update = F3(
-	function (sess, msg, model) {
+var $author$project$NewTournament$createTournament = function (req) {
+	return A4(
+		$author$project$WebUtils$twirpReq,
+		'TournamentRankerService',
+		'AddTournament',
+		A2($author$project$WebUtils$buildExpect, $author$project$NewTournament$creationDecoder, $author$project$NewTournament$TournamentCreated),
+		$elm$http$Http$jsonBody(
+			$author$project$NewTournament$reqEncoder(req)));
+};
+var $author$project$NewTournament$update = F2(
+	function (msg, model) {
 		switch (msg.$) {
 			case 'StoreCategory':
 				var category = msg.a;
@@ -7266,24 +7078,28 @@ var $author$project$NewTournament$update = F3(
 			case 'Submit':
 				return _Utils_Tuple2(
 					model,
-					A2($author$project$NewTournament$createTournament, sess, model.tournamentRequest));
+					$author$project$NewTournament$createTournament(model.tournamentRequest));
 			default:
-				if (msg.a.$ === 'Ok') {
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{createError: $elm$core$Maybe$Nothing}),
-						A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
-				} else {
-					var error = msg.a.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								createError: $elm$core$Maybe$Just(
-									$author$project$Errors$buildErrorMessage(error))
-							}),
-						$elm$core$Platform$Cmd$none);
+				var resp = msg.a;
+				switch (resp.$) {
+					case 'Success':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{createError: $elm$core$Maybe$Nothing}),
+							A2($author$project$Route$pushUrl, $author$project$Route$Tournaments, model.navKey));
+					case 'Failure':
+						var detailedError = resp.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									createError: $elm$core$Maybe$Just(
+										$author$project$Errors$buildErrorMessage(detailedError))
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
 	});
@@ -7306,20 +7122,36 @@ var $author$project$Standings$aliasReqEncoder = function (req) {
 				$elm$json$Json$Encode$string(req.alias))
 			]));
 };
-var $author$project$Standings$createAlias = F3(
-	function (sess, alias_, realname) {
-		return A5(
-			$author$project$Session$twirpReq,
-			sess,
+var $author$project$WebUtils$buildTextExpect = function (msg) {
+	return $jzxhuang$http_extras$Http$Detailed$expectString(
+		function (result) {
+			return msg(
+				$krisajenkins$remotedata$RemoteData$fromResult(
+					function () {
+						if (result.$ === 'Err') {
+							var err = result.a;
+							return $elm$core$Result$Err(err);
+						} else {
+							var _v1 = result.a;
+							var str = _v1.b;
+							return $elm$core$Result$Ok(str);
+						}
+					}()));
+		});
+};
+var $author$project$Standings$createAlias = F2(
+	function (alias_, realname) {
+		return A4(
+			$author$project$WebUtils$twirpReq,
 			'TournamentRankerService',
 			'AddPlayerAlias',
-			$elm$http$Http$expectString($author$project$Standings$AliasCreated),
+			$author$project$WebUtils$buildTextExpect($author$project$Standings$AliasCreated),
 			$elm$http$Http$jsonBody(
 				$author$project$Standings$aliasReqEncoder(
 					A2($author$project$Standings$AliasRequest, realname, alias_))));
 	});
-var $author$project$Standings$update = F3(
-	function (sess, msg, model) {
+var $author$project$Standings$update = F2(
+	function (msg, model) {
 		switch (msg.$) {
 			case 'FetchStandings':
 				var dateRange = msg.a;
@@ -7358,36 +7190,40 @@ var $author$project$Standings$update = F3(
 			case 'SubmitAlias':
 				return _Utils_Tuple2(
 					model,
-					A3($author$project$Standings$createAlias, sess, model.potentialAlias, model.potentialRealName));
+					A2($author$project$Standings$createAlias, model.potentialAlias, model.potentialRealName));
 			default:
-				if (msg.a.$ === 'Ok') {
-					return _Utils_Tuple2(
-						model,
-						$author$project$Standings$fetchStandings(model.dateRange));
-				} else {
-					var error = msg.a.a;
-					return _Utils_Tuple2(
-						_Utils_update(
+				var resp = msg.a;
+				switch (resp.$) {
+					case 'Success':
+						return _Utils_Tuple2(
 							model,
-							{
-								aliasCreationError: $elm$core$Maybe$Just(
-									$author$project$Errors$buildErrorMessage(error))
-							}),
-						$elm$core$Platform$Cmd$none);
+							$author$project$Standings$fetchStandings(model.dateRange));
+					case 'Failure':
+						var detailedError = resp.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									aliasCreationError: $elm$core$Maybe$Just(
+										$author$project$Errors$buildErrorMessage(detailedError))
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.page);
-		_v0$6:
+		_v0$7:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ListPageMsg':
 					if (_v0.b.$ === 'TournamentListPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v1 = A3($author$project$ListTournaments$update, model.session, subMsg, pageModel);
+						var _v1 = A2($author$project$ListTournaments$update, subMsg, pageModel);
 						var updatedPageModel = _v1.a;
 						var updatedCmd = _v1.b;
 						return _Utils_Tuple2(
@@ -7398,13 +7234,13 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, updatedCmd));
 					} else {
-						break _v0$6;
+						break _v0$7;
 					}
 				case 'StandingsPageMsg':
 					if (_v0.b.$ === 'StandingsPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v2 = A3($author$project$Standings$update, model.session, subMsg, pageModel);
+						var _v2 = A2($author$project$Standings$update, subMsg, pageModel);
 						var updatedPageModel = _v2.a;
 						var updatedCmd = _v2.b;
 						return _Utils_Tuple2(
@@ -7415,13 +7251,13 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$StandingsPageMsg, updatedCmd));
 					} else {
-						break _v0$6;
+						break _v0$7;
 					}
 				case 'NewTournamentPageMsg':
 					if (_v0.b.$ === 'NewTournamentPage') {
 						var subMsg = _v0.a.a;
 						var pageModel = _v0.b.a;
-						var _v3 = A3($author$project$NewTournament$update, model.session, subMsg, pageModel);
+						var _v3 = A2($author$project$NewTournament$update, subMsg, pageModel);
 						var updatedPageModel = _v3.a;
 						var updatedCmd = _v3.b;
 						return _Utils_Tuple2(
@@ -7432,7 +7268,7 @@ var $author$project$Main$update = F2(
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$NewTournamentPageMsg, updatedCmd));
 					} else {
-						break _v0$6;
+						break _v0$7;
 					}
 				case 'LoginPageMsg':
 					if (_v0.b.$ === 'LoginPage') {
@@ -7445,12 +7281,11 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{
-									page: $author$project$Main$LoginPage(updatedPageModel),
-									session: $author$project$Session$Session(updatedPageModel.token)
+									page: $author$project$Main$LoginPage(updatedPageModel)
 								}),
 							A2($elm$core$Platform$Cmd$map, $author$project$Main$LoginPageMsg, updatedCmd));
 					} else {
-						break _v0$6;
+						break _v0$7;
 					}
 				case 'LinkClicked':
 					var urlRequest = _v0.a.a;
@@ -7468,7 +7303,7 @@ var $author$project$Main$update = F2(
 							model,
 							$elm$browser$Browser$Navigation$load(url));
 					}
-				default:
+				case 'UrlChanged':
 					var url = _v0.a.a;
 					var newRoute = $author$project$Route$parseUrl(url);
 					return $author$project$Main$initCurrentPage(
@@ -7477,6 +7312,13 @@ var $author$project$Main$update = F2(
 								model,
 								{route: newRoute}),
 							$elm$core$Platform$Cmd$none));
+				default:
+					var response = _v0.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{myuser: response}),
+						$elm$core$Platform$Cmd$none);
 			}
 		}
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -8443,607 +8285,32 @@ var $author$project$Main$currentView = function (model) {
 	}
 };
 var $elm$html$Html$nav = _VirtualDom_node('nav');
-var $simonh1000$elm_jwt$Jwt$TokenDecodeError = function (a) {
-	return {$: 'TokenDecodeError', a: a};
-};
-var $elm$core$Result$andThen = F2(
-	function (callback, result) {
-		if (result.$ === 'Ok') {
-			var value = result.a;
-			return callback(value);
-		} else {
-			var msg = result.a;
-			return $elm$core$Result$Err(msg);
-		}
-	});
-var $simonh1000$elm_jwt$Jwt$TokenHeaderError = {$: 'TokenHeaderError'};
-var $simonh1000$elm_jwt$Jwt$TokenProcessingError = function (a) {
-	return {$: 'TokenProcessingError', a: a};
-};
-var $elm$core$String$concat = function (strings) {
-	return A2($elm$core$String$join, '', strings);
-};
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $simonh1000$elm_jwt$Jwt$fixlength = function (s) {
-	var _v0 = A2(
-		$elm$core$Basics$modBy,
-		4,
-		$elm$core$String$length(s));
-	switch (_v0) {
-		case 0:
-			return $elm$core$Result$Ok(s);
-		case 2:
-			return $elm$core$Result$Ok(
-				$elm$core$String$concat(
-					_List_fromArray(
-						[s, '=='])));
-		case 3:
-			return $elm$core$Result$Ok(
-				$elm$core$String$concat(
-					_List_fromArray(
-						[s, '='])));
-		default:
-			return $elm$core$Result$Err(
-				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Wrong length'));
-	}
-};
-var $elm$core$Result$fromMaybe = F2(
-	function (err, maybe) {
-		if (maybe.$ === 'Just') {
-			var v = maybe.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			return $elm$core$Result$Err(err);
-		}
-	});
-var $elm$core$Result$map = F2(
-	function (func, ra) {
-		if (ra.$ === 'Ok') {
-			var a = ra.a;
-			return $elm$core$Result$Ok(
-				func(a));
-		} else {
-			var e = ra.a;
-			return $elm$core$Result$Err(e);
-		}
-	});
-var $elm$core$Result$map2 = F3(
-	function (func, ra, rb) {
-		if (ra.$ === 'Err') {
-			var x = ra.a;
-			return $elm$core$Result$Err(x);
-		} else {
-			var a = ra.a;
-			if (rb.$ === 'Err') {
-				var x = rb.a;
-				return $elm$core$Result$Err(x);
-			} else {
-				var b = rb.a;
-				return $elm$core$Result$Ok(
-					A2(func, a, b));
-			}
-		}
-	});
-var $elm$bytes$Bytes$Encode$getWidth = function (builder) {
-	switch (builder.$) {
-		case 'I8':
-			return 1;
-		case 'I16':
-			return 2;
-		case 'I32':
-			return 4;
-		case 'U8':
-			return 1;
-		case 'U16':
-			return 2;
-		case 'U32':
-			return 4;
-		case 'F32':
-			return 4;
-		case 'F64':
-			return 8;
-		case 'Seq':
-			var w = builder.a;
-			return w;
-		case 'Utf8':
-			var w = builder.a;
-			return w;
-		default:
-			var bs = builder.a;
-			return _Bytes_width(bs);
-	}
-};
-var $elm$bytes$Bytes$LE = {$: 'LE'};
-var $elm$bytes$Bytes$Encode$write = F3(
-	function (builder, mb, offset) {
-		switch (builder.$) {
-			case 'I8':
-				var n = builder.a;
-				return A3(_Bytes_write_i8, mb, offset, n);
-			case 'I16':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_i16,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'I32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_i32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'U8':
-				var n = builder.a;
-				return A3(_Bytes_write_u8, mb, offset, n);
-			case 'U16':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_u16,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'U32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_u32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'F32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_f32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'F64':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_f64,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'Seq':
-				var bs = builder.b;
-				return A3($elm$bytes$Bytes$Encode$writeSequence, bs, mb, offset);
-			case 'Utf8':
-				var s = builder.b;
-				return A3(_Bytes_write_string, mb, offset, s);
-			default:
-				var bs = builder.a;
-				return A3(_Bytes_write_bytes, mb, offset, bs);
-		}
-	});
-var $elm$bytes$Bytes$Encode$writeSequence = F3(
-	function (builders, mb, offset) {
-		writeSequence:
-		while (true) {
-			if (!builders.b) {
-				return offset;
-			} else {
-				var b = builders.a;
-				var bs = builders.b;
-				var $temp$builders = bs,
-					$temp$mb = mb,
-					$temp$offset = A3($elm$bytes$Bytes$Encode$write, b, mb, offset);
-				builders = $temp$builders;
-				mb = $temp$mb;
-				offset = $temp$offset;
-				continue writeSequence;
-			}
-		}
-	});
-var $elm$bytes$Bytes$Decode$decode = F2(
-	function (_v0, bs) {
-		var decoder = _v0.a;
-		return A2(_Bytes_decode, decoder, bs);
-	});
-var $elm$bytes$Bytes$Decode$Decoder = function (a) {
-	return {$: 'Decoder', a: a};
-};
-var $elm$bytes$Bytes$Decode$string = function (n) {
-	return $elm$bytes$Bytes$Decode$Decoder(
-		_Bytes_read_string(n));
-};
-var $elm$bytes$Bytes$Encode$encode = _Bytes_encode;
-var $elm$bytes$Bytes$BE = {$: 'BE'};
-var $danfishgold$base64_bytes$Encode$isValidChar = function (c) {
-	if ($elm$core$Char$isAlphaNum(c)) {
-		return true;
-	} else {
-		switch (c.valueOf()) {
-			case '+':
-				return true;
-			case '/':
-				return true;
-			default:
-				return false;
-		}
-	}
-};
-var $elm$core$Bitwise$or = _Bitwise_or;
-var $elm$bytes$Bytes$Encode$Seq = F2(
-	function (a, b) {
-		return {$: 'Seq', a: a, b: b};
-	});
-var $elm$bytes$Bytes$Encode$getWidths = F2(
-	function (width, builders) {
-		getWidths:
-		while (true) {
-			if (!builders.b) {
-				return width;
-			} else {
-				var b = builders.a;
-				var bs = builders.b;
-				var $temp$width = width + $elm$bytes$Bytes$Encode$getWidth(b),
-					$temp$builders = bs;
-				width = $temp$width;
-				builders = $temp$builders;
-				continue getWidths;
-			}
-		}
-	});
-var $elm$bytes$Bytes$Encode$sequence = function (builders) {
-	return A2(
-		$elm$bytes$Bytes$Encode$Seq,
-		A2($elm$bytes$Bytes$Encode$getWidths, 0, builders),
-		builders);
-};
-var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
-var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
-var $danfishgold$base64_bytes$Encode$unsafeConvertChar = function (_char) {
-	var key = $elm$core$Char$toCode(_char);
-	if ((key >= 65) && (key <= 90)) {
-		return key - 65;
-	} else {
-		if ((key >= 97) && (key <= 122)) {
-			return (key - 97) + 26;
-		} else {
-			if ((key >= 48) && (key <= 57)) {
-				return ((key - 48) + 26) + 26;
-			} else {
-				switch (_char.valueOf()) {
-					case '+':
-						return 62;
-					case '/':
-						return 63;
-					default:
-						return -1;
-				}
-			}
-		}
-	}
-};
-var $elm$bytes$Bytes$Encode$U16 = F2(
-	function (a, b) {
-		return {$: 'U16', a: a, b: b};
-	});
-var $elm$bytes$Bytes$Encode$unsignedInt16 = $elm$bytes$Bytes$Encode$U16;
-var $elm$bytes$Bytes$Encode$U8 = function (a) {
-	return {$: 'U8', a: a};
-};
-var $elm$bytes$Bytes$Encode$unsignedInt8 = $elm$bytes$Bytes$Encode$U8;
-var $danfishgold$base64_bytes$Encode$encodeCharacters = F4(
-	function (a, b, c, d) {
-		if ($danfishgold$base64_bytes$Encode$isValidChar(a) && $danfishgold$base64_bytes$Encode$isValidChar(b)) {
-			var n2 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(b);
-			var n1 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(a);
-			if ('=' === d.valueOf()) {
-				if ('=' === c.valueOf()) {
-					var n = (n1 << 18) | (n2 << 12);
-					var b1 = n >> 16;
-					return $elm$core$Maybe$Just(
-						$elm$bytes$Bytes$Encode$unsignedInt8(b1));
-				} else {
-					if ($danfishgold$base64_bytes$Encode$isValidChar(c)) {
-						var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
-						var n = ((n1 << 18) | (n2 << 12)) | (n3 << 6);
-						var combined = n >> 8;
-						return $elm$core$Maybe$Just(
-							A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined));
-					} else {
-						return $elm$core$Maybe$Nothing;
-					}
-				}
-			} else {
-				if ($danfishgold$base64_bytes$Encode$isValidChar(c) && $danfishgold$base64_bytes$Encode$isValidChar(d)) {
-					var n4 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(d);
-					var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
-					var n = ((n1 << 18) | (n2 << 12)) | ((n3 << 6) | n4);
-					var combined = n >> 8;
-					var b3 = n;
-					return $elm$core$Maybe$Just(
-						$elm$bytes$Bytes$Encode$sequence(
-							_List_fromArray(
-								[
-									A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined),
-									$elm$bytes$Bytes$Encode$unsignedInt8(b3)
-								])));
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			}
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$String$foldr = _String_foldr;
-var $elm$core$String$toList = function (string) {
-	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
-};
-var $danfishgold$base64_bytes$Encode$encodeChunks = F2(
-	function (input, accum) {
-		encodeChunks:
-		while (true) {
-			var _v0 = $elm$core$String$toList(
-				A2($elm$core$String$left, 4, input));
-			_v0$4:
-			while (true) {
-				if (!_v0.b) {
-					return $elm$core$Maybe$Just(accum);
-				} else {
-					if (_v0.b.b) {
-						if (_v0.b.b.b) {
-							if (_v0.b.b.b.b) {
-								if (!_v0.b.b.b.b.b) {
-									var a = _v0.a;
-									var _v1 = _v0.b;
-									var b = _v1.a;
-									var _v2 = _v1.b;
-									var c = _v2.a;
-									var _v3 = _v2.b;
-									var d = _v3.a;
-									var _v4 = A4($danfishgold$base64_bytes$Encode$encodeCharacters, a, b, c, d);
-									if (_v4.$ === 'Just') {
-										var enc = _v4.a;
-										var $temp$input = A2($elm$core$String$dropLeft, 4, input),
-											$temp$accum = A2($elm$core$List$cons, enc, accum);
-										input = $temp$input;
-										accum = $temp$accum;
-										continue encodeChunks;
-									} else {
-										return $elm$core$Maybe$Nothing;
-									}
-								} else {
-									break _v0$4;
-								}
-							} else {
-								var a = _v0.a;
-								var _v5 = _v0.b;
-								var b = _v5.a;
-								var _v6 = _v5.b;
-								var c = _v6.a;
-								var _v7 = A4(
-									$danfishgold$base64_bytes$Encode$encodeCharacters,
-									a,
-									b,
-									c,
-									_Utils_chr('='));
-								if (_v7.$ === 'Nothing') {
-									return $elm$core$Maybe$Nothing;
-								} else {
-									var enc = _v7.a;
-									return $elm$core$Maybe$Just(
-										A2($elm$core$List$cons, enc, accum));
-								}
-							}
-						} else {
-							var a = _v0.a;
-							var _v8 = _v0.b;
-							var b = _v8.a;
-							var _v9 = A4(
-								$danfishgold$base64_bytes$Encode$encodeCharacters,
-								a,
-								b,
-								_Utils_chr('='),
-								_Utils_chr('='));
-							if (_v9.$ === 'Nothing') {
-								return $elm$core$Maybe$Nothing;
-							} else {
-								var enc = _v9.a;
-								return $elm$core$Maybe$Just(
-									A2($elm$core$List$cons, enc, accum));
-							}
-						}
-					} else {
-						break _v0$4;
-					}
-				}
-			}
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $danfishgold$base64_bytes$Encode$encoder = function (string) {
-	return A2(
-		$elm$core$Maybe$map,
-		A2($elm$core$Basics$composeR, $elm$core$List$reverse, $elm$bytes$Bytes$Encode$sequence),
-		A2($danfishgold$base64_bytes$Encode$encodeChunks, string, _List_Nil));
-};
-var $danfishgold$base64_bytes$Encode$toBytes = function (string) {
-	return A2(
-		$elm$core$Maybe$map,
-		$elm$bytes$Bytes$Encode$encode,
-		$danfishgold$base64_bytes$Encode$encoder(string));
-};
-var $danfishgold$base64_bytes$Base64$toBytes = $danfishgold$base64_bytes$Encode$toBytes;
-var $elm$bytes$Bytes$width = _Bytes_width;
-var $danfishgold$base64_bytes$Base64$toString = function (b64String) {
-	var _v0 = $danfishgold$base64_bytes$Base64$toBytes(b64String);
-	if (_v0.$ === 'Nothing') {
-		return $elm$core$Maybe$Nothing;
-	} else {
-		var b64Bytes = _v0.a;
-		return A2(
-			$elm$bytes$Bytes$Decode$decode,
-			$elm$bytes$Bytes$Decode$string(
-				$elm$bytes$Bytes$width(b64Bytes)),
-			b64Bytes);
-	}
-};
-var $elm$core$String$map = _String_map;
-var $simonh1000$elm_jwt$Jwt$unurl = function () {
-	var fix = function (c) {
-		switch (c.valueOf()) {
-			case '-':
-				return _Utils_chr('+');
-			case '_':
-				return _Utils_chr('/');
-			default:
-				return c;
-		}
-	};
-	return $elm$core$String$map(fix);
-}();
-var $elm$json$Json$Decode$value = _Json_decodeValue;
-var $simonh1000$elm_jwt$Jwt$getTokenParts = function (token) {
-	var verifyJson = F2(
-		function (errorHandler, str) {
+var $author$project$Main$userOrLogin = function (user) {
+	switch (user.$) {
+		case 'NotAsked':
+			return $elm$html$Html$text('');
+		case 'Loading':
+			return $elm$html$Html$text('Loading...');
+		case 'Success':
+			var actualuser = user.a;
 			return A2(
-				$elm$core$Result$mapError,
-				errorHandler,
-				A2(
-					$elm$core$Result$map,
-					function (_v8) {
-						return str;
-					},
-					A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, str)));
-		});
-	var processor = A2(
-		$elm$core$Basics$composeR,
-		$simonh1000$elm_jwt$Jwt$unurl,
-		A2(
-			$elm$core$Basics$composeR,
-			$elm$core$String$split('.'),
-			$elm$core$List$map($simonh1000$elm_jwt$Jwt$fixlength)));
-	var _v0 = processor(token);
-	_v0$1:
-	while (true) {
-		if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
-			if (_v0.a.$ === 'Ok') {
-				if (_v0.b.a.$ === 'Ok') {
-					var header = _v0.a.a;
-					var _v1 = _v0.b;
-					var body = _v1.a.a;
-					var _v2 = _v1.b;
-					var header_ = A2(
-						$elm$core$Result$andThen,
-						verifyJson(
-							function (_v3) {
-								return $simonh1000$elm_jwt$Jwt$TokenHeaderError;
-							}),
-						A2(
-							$elm$core$Result$fromMaybe,
-							$simonh1000$elm_jwt$Jwt$TokenHeaderError,
-							$danfishgold$base64_bytes$Base64$toString(header)));
-					var body_ = A2(
-						$elm$core$Result$andThen,
-						verifyJson($simonh1000$elm_jwt$Jwt$TokenDecodeError),
-						A2(
-							$elm$core$Result$fromMaybe,
-							$simonh1000$elm_jwt$Jwt$TokenProcessingError('Invalid UTF-16'),
-							$danfishgold$base64_bytes$Base64$toString(body)));
-					return A3(
-						$elm$core$Result$map2,
-						F2(
-							function (a, b) {
-								return _Utils_Tuple2(a, b);
-							}),
-						header_,
-						body_);
-				} else {
-					break _v0$1;
-				}
-			} else {
-				if (_v0.b.a.$ === 'Err') {
-					break _v0$1;
-				} else {
-					var err = _v0.a.a;
-					var _v6 = _v0.b;
-					var _v7 = _v6.b;
-					return $elm$core$Result$Err(err);
-				}
-			}
-		} else {
-			return $elm$core$Result$Err(
-				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Token has invalid shape'));
-		}
-	}
-	var _v4 = _v0.b;
-	var err = _v4.a.a;
-	var _v5 = _v4.b;
-	return $elm$core$Result$Err(err);
-};
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
-var $simonh1000$elm_jwt$Jwt$decodeToken = F2(
-	function (dec, token) {
-		return A2(
-			$elm$core$Result$andThen,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$decodeString(dec),
-				$elm$core$Result$mapError($simonh1000$elm_jwt$Jwt$TokenDecodeError)),
-			A2(
-				$elm$core$Result$map,
-				$elm$core$Tuple$second,
-				$simonh1000$elm_jwt$Jwt$getTokenParts(token)));
-	});
-var $author$project$Main$jwtDecoder = A2($elm$json$Json$Decode$field, 'sub', $elm$json$Json$Decode$string);
-var $author$project$Main$emailFromJwt = function (jwt) {
-	return A2($simonh1000$elm_jwt$Jwt$decodeToken, $author$project$Main$jwtDecoder, jwt);
-};
-var $author$project$Main$userOrLogin = function (model) {
-	var email = $author$project$Main$emailFromJwt(model.session.jwt);
-	if (email.$ === 'Err') {
-		return A2(
-			$elm$html$Html$a,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$href('/login')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Log in')
-				]));
-	} else {
-		var actualEmail = email.a;
-		return A2(
-			$elm$html$Html$span,
-			_List_Nil,
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Logged in as ' + actualEmail)
-				]));
+				$elm$html$Html$span,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Logged in as ' + actualuser.email)
+					]));
+		default:
+			return A2(
+				$elm$html$Html$a,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$href('/login')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Log in')
+					]));
 	}
 };
 var $author$project$Main$loggedInBar = function (model) {
@@ -9081,7 +8348,7 @@ var $author$project$Main$loggedInBar = function (model) {
 							]),
 						_List_fromArray(
 							[
-								$author$project$Main$userOrLogin(model)
+								$author$project$Main$userOrLogin(model.myuser)
 							]))
 					]))
 			]));

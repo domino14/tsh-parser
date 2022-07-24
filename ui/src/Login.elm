@@ -10,8 +10,7 @@ import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
 import RemoteData
 import Route exposing (Route(..))
-import Session exposing (buildExpect)
-import WebUtils
+import WebUtils exposing (buildExpect)
 
 
 type alias LoginRequest =
@@ -141,7 +140,7 @@ update msg model =
 requestJWT : LoginRequest -> Cmd Msg
 requestJWT req =
     Http.post
-        { url = "http://localhost:8082/twirp/tshparser.AuthenticationService/GetJWT"
+        { url = "/twirp/tshparser.AuthenticationService/GetJWT"
         , body = Http.jsonBody (reqEncoder req)
         , expect = buildExpect loginResponseDecoder LoggedIn
         }

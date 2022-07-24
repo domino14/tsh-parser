@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend.dockerfile-dev
+    environment:
+      DB_MIGRATIONS_PATH: file:///opt/program/migrations
+      DB_PATH: /opt/program/mgi.db
+      TOURNEY_SCHEMA_PATH: /opt/program/cfg/pts_mgi.csv
+      SECRET_KEY: foobar
+    volumes:
+      - .:/opt/program:rw
+    command: sh -c "go run -race cmd/tshparser/*.go"
+    depends_on: [ "proxy" ]
+    networks:
+      - parsernet
+    labels:
+      - "traefik.http.routers.tshparser.rule=PathPrefix(`/twirp/`)"
+      - "traefik.http.routers.tshparser.entrypoints=web"
+      - "traefik.http.services.tshparser.loadbalancer.server.port=8082"
+      - traefik.enable=true
+
+  proxy:
+    image: "traefik:v2.2"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - parsernet
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.dockerfile
+    volumes:
+      - ./ui:/opt/ui
+    networks:
+      - parsernet
+    command: elm-live src/Main.elm --pushstate -h 0.0.0.0 -- --output=compiled.js
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.parser-fe.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.parser-fe.service=parser-fe-service"
+      - "traefik.http.routers.parser-fe.entrypoints=web"
+      - "traefik.http.services.parser-fe-service.loadbalancer.server.port=8000"
+
+networks:
+  parsernet:
+    driver: bridge
