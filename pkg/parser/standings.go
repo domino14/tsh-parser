@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	proto "github.com/domino14/tshparser/rpc"
 )
 
@@ -97,6 +99,22 @@ func createPtMap(schemaFile string) (map[string]int, error) {
 	return ptmap, nil
 }
 
+func deleteByes(standings map[string]*proto.Standing) {
+	toDelete := []string{}
+	for s := range standings {
+		if strings.Contains(s, "bye") ||
+			strings.Contains(s, "Bye") ||
+			strings.Contains(s, "Gracious Picker") ||
+			strings.Contains(s, "GraciousPicker") {
+			toDelete = append(toDelete, s)
+		}
+	}
+	for _, t := range toDelete {
+		delete(standings, t)
+	}
+	log.Info().Interface("toDelete", toDelete).Msg("deleting from standings")
+}
+
 func computeStandings(tourneys []*proto.Tournament, schemaFile string, aliases map[string]string) ([]*proto.Standing, error) {
 	ptmap, err := createPtMap(schemaFile)
 	if err != nil {
@@ -116,12 +134,14 @@ func computeStandings(tourneys []*proto.Tournament, schemaFile string, aliases m
 			pts, ok := ptmap[fmt.Sprintf("%d:%s", si+1, t.TournamentType)]
 			if !ok {
 				pts = 100
-				fmt.Println("[WARNING] place", si+1, "had no entry for tournament type", t.TournamentType, "... defaulting to 100 pts")
+				log.Warn().Msgf("place %d had no entry for tournament type %s ... defaulting to 100 pts", si+1, t.TournamentType)
 			}
 			s.Points = int32(pts)
 			playerStandings[s.PlayerName] = aggregate(playerStandings[s.PlayerName], s)
 		}
 	}
+
+	deleteByes(playerStandings)
 
 	// now aggregate and remove aliases
 	for alias, realPlayer := range aliases {

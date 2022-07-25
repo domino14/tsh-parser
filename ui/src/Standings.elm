@@ -84,7 +84,7 @@ update msg model =
         AliasCreated resp ->
             case resp of
                 RemoteData.Success _ ->
-                    ( model, fetchStandings model.dateRange )
+                    ( { model | modalVisible = False }, fetchStandings model.dateRange )
 
                 RemoteData.Failure detailedError ->
                     ( { model | aliasCreationError = Just (buildErrorMessage detailedError) }, Cmd.none )
@@ -212,6 +212,7 @@ viewAliasModal visible potentialAlias aliasCreationError =
                         )
                     ]
                 , p [] [ text "Please make sure to type it in **exactly**, with commas as needed." ]
+                , p [] [ text "Note that if this player name does not exist in the standings, this alias won't work as expected. Both the alias and the player name must already be in the standings." ]
                 , br [] []
                 , br [] []
                 , textInput

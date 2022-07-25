@@ -1,9 +1,13 @@
 module Aliases exposing (..)
 
+import Errors exposing (buildErrorMessage)
 import Html exposing (..)
+import Html.Attributes exposing (class, type_)
+import Html.Events exposing (onClick)
 import Http exposing (stringBody)
 import Http.Detailed
 import Json.Decode as Decode exposing (Decoder, field, list, string)
+import Json.Encode as Encode
 import RemoteData exposing (RemoteData)
 import WebUtils exposing (DetailedWebData, buildExpect, twirpReq)
 
@@ -64,14 +68,28 @@ update msg model =
             ( { model | playerAliases = response }, Cmd.none )
 
         DeleteAlias theAlias ->
-            ( model, Cmd.none )
+            ( model, deleteAlias theAlias )
 
         -- fix
         AliasDeleted (Ok _) ->
-            ( model, Cmd.none )
+            ( model, fetchAliases )
 
         AliasDeleted (Err error) ->
             ( model, Cmd.none )
+
+
+deleteAlias : String -> Cmd Msg
+deleteAlias alias_ =
+    twirpReq
+        "TournamentRankerService"
+        "RemovePlayerAlias"
+        (Http.Detailed.expectString AliasDeleted)
+        (Http.jsonBody (aliasEncoder alias_))
+
+
+aliasEncoder : String -> Encode.Value
+aliasEncoder alias_ =
+    Encode.object [ ( "alias", Encode.string alias_ ) ]
 
 
 
@@ -80,4 +98,43 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Html.text "foo"
+    case model.playerAliases of
+        RemoteData.NotAsked ->
+            text ""
+
+        RemoteData.Loading ->
+            h3 [ class "subtitle is-2" ] [ text "Loading..." ]
+
+        RemoteData.Success aliases ->
+            div []
+                [ h2 [ class "subtitle is-2" ] [ text "Aliases" ]
+                , table [ class "table" ]
+                    (viewTableHeader :: List.map viewAlias aliases)
+                ]
+
+        RemoteData.Failure httpError ->
+            div []
+                [ h3 [] [ text "Couldn't fetch aliases at this time." ]
+                , text ("Error: " ++ buildErrorMessage httpError)
+                ]
+
+
+viewTableHeader : Html Msg
+viewTableHeader =
+    tr []
+        [ th [] [ text "Real name" ]
+        , th [] [ text "Alias" ]
+        , th [] [ text "" ]
+        ]
+
+
+viewAlias : PlayerAlias -> Html Msg
+viewAlias playerAlias =
+    tr []
+        [ td [] [ text playerAlias.correctName ]
+        , td [] [ text playerAlias.alias ]
+        , td []
+            [ button [ class "button is-warning", type_ "button", onClick (DeleteAlias playerAlias.alias) ]
+                [ text "Delete" ]
+            ]
+        ]
