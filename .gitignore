@@ -2,3 +2,5 @@ ui/elm-stuff
 mgi.db
 .vscode
 compiled.js
+ui/elm.js
+ui/elm.min.js
