@@ -1,17 +1,16 @@
 module NewTournament exposing (..)
 
 import Browser.Navigation as Nav
-import BulmaForm exposing (Option, TextInputParams, buttonInput, selectInput, textInput)
+import BulmaForm exposing (Option, buttonInput, selectInput, textInput)
 import Errors exposing (buildErrorMessage)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
 import Http
-import Json.Decode as Decode exposing (Decoder, field, map, string)
+import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
 import ListTournaments exposing (Msg)
-import RemoteData exposing (RemoteData)
-import Route exposing (Route)
+import RemoteData
+import Route
 import WebUtils exposing (buildExpect, twirpReq)
 
 

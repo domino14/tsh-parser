@@ -1,6 +1,6 @@
 module Tournament exposing (..)
 
-import Json.Decode as Decode exposing (Decoder, field, int, list, string)
+import Json.Decode as Decode exposing (Decoder, field, list, string)
 import Json.Decode.Pipeline exposing (required)
 
 

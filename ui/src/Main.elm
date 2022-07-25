@@ -4,18 +4,17 @@ import Aliases
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, href, id, src)
+import Html.Attributes exposing (attribute, class, href, src)
 import Html.Events exposing (onClick)
 import Http exposing (stringBody)
-import Json.Decode as Decode exposing (Decoder, field, string)
+import Json.Decode as Decode exposing (Decoder, string)
 import Json.Decode.Pipeline exposing (required)
 import Jwt
 import ListTournaments
 import Login
 import NewTournament
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route exposing (Route(..))
-import SingleStanding exposing (Standing)
 import Standings
 import Url exposing (Url)
 import WebUtils exposing (DetailedWebData, buildExpect, twirpReq)

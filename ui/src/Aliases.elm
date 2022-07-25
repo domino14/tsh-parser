@@ -8,7 +8,7 @@ import Http exposing (stringBody)
 import Http.Detailed
 import Json.Decode as Decode exposing (Decoder, field, list, string)
 import Json.Encode as Encode
-import RemoteData exposing (RemoteData)
+import RemoteData
 import WebUtils exposing (DetailedWebData, buildExpect, twirpReq)
 
 
