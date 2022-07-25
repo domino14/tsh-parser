@@ -148,9 +148,11 @@ func computeStandings(tourneys []*proto.Tournament, schemaFile string, aliases m
 		if _, ok := playerStandings[alias]; ok {
 			playerStandings[realPlayer] = aggregate(playerStandings[realPlayer], playerStandings[alias])
 			delete(playerStandings, alias)
+			// make sure the real player name gets passed through correctly,
+			// as the aggregate function doesn't do this.
+			playerStandings[realPlayer].PlayerName = realPlayer
 		}
 	}
-
 	vals := []*proto.Standing{}
 	for _, v := range playerStandings {
 		vals = append(vals, v)

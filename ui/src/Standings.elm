@@ -206,12 +206,12 @@ viewAliasModal visible potentialAlias aliasCreationError =
                 [ p
                     []
                     [ text
-                        ("Please type in a player name that you want "
+                        ("Please type in the REAL player name that you want "
                             ++ potentialAlias
                             ++ " to be an alias of. "
                         )
                     ]
-                , p [] [ text "Please make sure to type it in **exactly**, with commas as needed." ]
+                , p [] [ text "Please make sure to type it in **exactly**, with commas and spaces as needed." ]
                 , p [] [ text "Note that if this player name does not exist in the standings, this alias won't work as expected. Both the alias and the player name must already be in the standings." ]
                 , br [] []
                 , br [] []

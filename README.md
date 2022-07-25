@@ -37,3 +37,18 @@ Basically, you get a great API for free. The only thing I slightly dislike about
 ### Why Elm?
 
 My package-lock.json file for several of my projects has literally tens of thousands of lines in it, with all sorts of different versions of the same package. These update constantly as all sorts of security issues are found, resulting in errors and incompatibilities. It is terrible. I want to try something new.
+
+### Building app
+
+Right now I do this manually. For example:
+
+```
+docker build -f backend.dockerfile -t domino14/tshparser:v0.0.1 .
+``` 
+
+And in the ui directory:
+```
+./optimize.sh src/Main.elm
+```
+
+The output `elm.min.js` can be renamed to `compiled.js` in prod.
