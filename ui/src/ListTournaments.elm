@@ -34,7 +34,7 @@ init =
             { tournaments = RemoteData.Loading
             , dateRange =
                 { beginDate = "2022-01-01T00:00:00Z"
-                , endDate = "2023-01-01T00:00:00Z"
+                , endDate = "2024-01-01T00:00:00Z"
                 }
             , deleteError = Nothing
             }
